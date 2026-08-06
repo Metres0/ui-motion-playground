@@ -4,7 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * 更新策略设置：自动更新间隔（手动 / 6h / 12h / 24h / 48h）。
+ * 更新策略设置：自动更新间隔（手动 / 6h / 12h / 24h / 48h）+ 新文章通知开关。
  */
 class UpdateSettings(context: Context) {
 
@@ -13,14 +13,19 @@ class UpdateSettings(context: Context) {
 
     data class UpdateConfig(
         val intervalHours: Int, // 0 = 手动
+        val notifyEnabled: Boolean = true, // 后台同步发现新文章时弹通知
     )
 
     fun load(): UpdateConfig = UpdateConfig(
         intervalHours = prefs.getInt(KEY_INTERVAL, 24).coerceAtLeast(0),
+        notifyEnabled = prefs.getBoolean(KEY_NOTIFY, true),
     )
 
     fun save(config: UpdateConfig) {
-        prefs.edit().putInt(KEY_INTERVAL, config.intervalHours).apply()
+        prefs.edit()
+            .putInt(KEY_INTERVAL, config.intervalHours)
+            .putBoolean(KEY_NOTIFY, config.notifyEnabled)
+            .apply()
     }
 
     /** 是否需要刷新某源：缓存为空 或 距上次更新已超过间隔。 */
@@ -34,6 +39,7 @@ class UpdateSettings(context: Context) {
 
     companion object {
         private const val KEY_INTERVAL = "interval_hours"
+        private const val KEY_NOTIFY = "notify_enabled"
         val OPTIONS = listOf(0, 6, 12, 24, 48)
     }
 }

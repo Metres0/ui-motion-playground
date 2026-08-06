@@ -1,5 +1,8 @@
 package com.example.feedlite.ui.settings
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -41,6 +44,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -55,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
@@ -104,6 +109,18 @@ fun SettingsScreen(
     var importMsg by remember { mutableStateOf<String?>(null) }
 
     var showAbout by remember { mutableStateOf(false) }
+
+    // ★ v1.34：新文章通知权限（Android 13+ 运行时申请；授权后开启开关）
+    val notifPermLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            viewModel.setNotifyEnabled(true)
+        } else {
+            viewModel.setNotifyEnabled(false)
+            android.widget.Toast.makeText(context, "未授予通知权限，无法接收新文章提醒", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // ★ OPML 导入/导出 launcher（须在 UI 引用前声明）
     val exportLauncher = rememberLauncherForActivityResult(
@@ -322,14 +339,40 @@ fun SettingsScreen(
                     }
                     FilterChip(
                         selected = updateCfg.intervalHours == h,
-                        onClick = {
-                            viewModel.setInterval(h)
-                            // ★ v1.32：立即按新间隔重新注册后台同步（0=手动则取消）
-                            com.example.feedlite.data.SyncScheduler.schedule(context)
-                        },
+                        onClick = { viewModel.setInterval(h) },
                         label = { Text(label) },
                     )
                 }
+            }
+
+            // ★ v1.34：新文章通知开关
+            Spacer(Modifier.height(16.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("新文章通知", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        "后台同步发现新文章时推送系统提醒",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = updateCfg.notifyEnabled,
+                    onCheckedChange = { checked ->
+                        // Android 13+ 首次开启需申请通知权限；被拒则保持关闭
+                        if (checked && Build.VERSION.SDK_INT >= 33 &&
+                            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        ) {
+                            notifPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        } else {
+                            viewModel.setNotifyEnabled(checked)
+                        }
+                    },
+                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -340,7 +383,11 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         error = viewModel.saveAll()
-                        if (error == null) saved = true
+                        if (error == null) {
+                            saved = true
+                            // ★ v1.34：设置落盘后才按新间隔（重新）调度后台同步（0=手动则取消）
+                            com.example.feedlite.data.SyncScheduler.schedule(context)
+                        }
                     },
                     modifier = Modifier.weight(1f),
                 ) { Text("保存全部设置") }

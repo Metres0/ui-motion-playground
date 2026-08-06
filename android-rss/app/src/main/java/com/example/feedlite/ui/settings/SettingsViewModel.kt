@@ -102,6 +102,11 @@ class SettingsViewModel(
     val updateConfig: StateFlow<UpdateSettings.UpdateConfig> = _updateConfig.asStateFlow()
 
     fun setInterval(hours: Int) {
-        _updateConfig.value = UpdateSettings.UpdateConfig(hours)
+        _updateConfig.value = _updateConfig.value.copy(intervalHours = hours)
+    }
+
+    /** 新文章通知开关（v1.34）。 */
+    fun setNotifyEnabled(enabled: Boolean) {
+        _updateConfig.value = _updateConfig.value.copy(notifyEnabled = enabled)
     }
 }

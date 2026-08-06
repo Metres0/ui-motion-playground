@@ -3,6 +3,8 @@
 
     <!-- 抓取 RSS feed 需要网络 -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- v1.34：后台同步新文章系统通知（Android 13+ 需运行时申请） -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".FeedLiteApp"

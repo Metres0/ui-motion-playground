@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 源管理独立 Tab + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.33**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.34**。
 
 ---
 
@@ -31,6 +31,17 @@
 | Key 加密 | 翻译 API Key 用 Android Keystore（AES/GCM）加密存储，不再明文落盘 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源；失败计数不再虚报 |
 | 后台同步 | 「自动更新」由 WorkManager 系统调度（网络可用时按间隔静默抓取） |
+
+## 二、v1.34 更新日志（新文章通知）
+
+1. **新文章通知**：后台同步（WorkManager）发现新文章时弹系统通知——标题「N 篇新文章」、
+   正文列新增数最高的前 3 个源（超 3 源追加「等 N 个源」）；点击通知打开 App；
+   固定通知 id 覆盖不堆积；
+2. **设置开关**：设置 → 更新策略 →「新文章通知」开关（默认开）；Android 13+ 首次开启自动申请
+   `POST_NOTIFICATIONS` 权限，被拒则保持关闭并提示；
+3. **修复 v1.32 时序 bug**：自动更新间隔的 `SyncScheduler.schedule` 从「点击即调」移到
+   「保存全部设置」成功后调用——此前点击 chip 时新间隔尚未落盘，调度用的还是旧值；
+4. **单测**：新增 `NotificationSummaryTest`（5 例，纯函数）。
 
 ## 二、v1.33 更新日志（演进方向）
 
@@ -346,7 +357,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.33 / versionCode 34 |
+| 版本 | versionName 1.34 / versionCode 35 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

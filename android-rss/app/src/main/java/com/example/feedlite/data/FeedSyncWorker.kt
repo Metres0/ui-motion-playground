@@ -43,6 +43,13 @@ class FeedSyncWorker(
         for (src in due) {
             if (src.id in result.failures) health.recordFailure(src.id) else health.recordSuccess(src.id)
         }
+        // ★ v1.34：新文章通知（开启且无新增时才不弹）
+        if (settings.load().notifyEnabled) {
+            val titles = store.allSources().associate { it.id to it.title }
+            NotificationSummary.from(result.added, titles)?.let { summary ->
+                NewArticleNotifier(applicationContext).notify(result.added.values.sum(), summary)
+            }
+        }
         return if (result.failures.size == due.size) {
             Result.retry() // 全部失败：WorkManager 指数退避重试
         } else {
