@@ -91,7 +91,11 @@ class ReadingStateStore(context: Context) {
 
     fun getProgress(key: String): Float = progressMap()[key] ?: 0f
 
-    // ── 内部：通用 item 存储 ─────────────────
+    // ── 已读清理（v1.10） ───────────────────
+    fun clearRead() {
+        prefs.edit().remove(KEY_READ).apply()
+        bump()
+    }
     private fun itemMap(prefKey: String): Map<String, RssItem> {
         val raw = prefs.getString(prefKey, null) ?: return emptyMap()
         return try {

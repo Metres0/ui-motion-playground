@@ -1,5 +1,7 @@
 package com.example.feedlite.ui.settings
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +16,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.IosShare
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.feedlite.data.Opml
 import com.example.feedlite.data.ReadingSettings
+import com.example.feedlite.data.ReadingStateStore
+import com.example.feedlite.data.SubscriptionStore
 import com.example.feedlite.data.ThemeSettings
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
@@ -59,6 +68,8 @@ fun SettingsScreen(
     translator: Translator,
     updateSettings: UpdateSettings,
     themeSettings: ThemeSettings,
+    subscriptionStore: SubscriptionStore,
+    readingState: ReadingStateStore,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -74,6 +85,44 @@ fun SettingsScreen(
     val themeMode by themeSettings.mode.collectAsState()
     var saved by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var importMsg by remember { mutableStateOf<String?>(null) }
+
+    // ★ OPML 导入/导出 launcher（须在 UI 引用前声明）
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("text/xml")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val sources = subscriptionStore.allSources()
+                context.contentResolver.openOutputStream(uri)?.use {
+                    it.write(Opml.export(sources).toByteArray(Charsets.UTF_8))
+                }
+                android.widget.Toast.makeText(context, "订阅已导出（${sources.size} 个）", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "导出失败：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                val text = context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
+                val list = Opml.parse(text)
+                var added = 0
+                list.forEach { (title, url) ->
+                    if (subscriptionStore.allSources().none { it.url == url }) {
+                        subscriptionStore.addCustom(title, url)
+                        added++
+                    }
+                }
+                importMsg = "导入完成：新增 $added 个订阅源"
+            } catch (e: Exception) {
+                importMsg = "导入失败：${e.message}"
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -317,6 +366,55 @@ fun SettingsScreen(
             if (error != null) {
                 Spacer(Modifier.height(8.dp))
                 Text("✗ $error", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // ════════ 数据管理 ════════
+            Text("数据管理", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 导出 OPML
+                OutlinedButton(
+                    onClick = { exportLauncher.launch("feedlite_subscriptions.opml") },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.IosShare, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("导出订阅")
+                }
+                // 导入 OPML
+                OutlinedButton(
+                    onClick = { importLauncher.launch(arrayOf("text/xml", "text/plain", "*/*")) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("导入订阅")
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "OPML 文件可与其他阅读器互换订阅源",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = { readingState.clearRead() },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("清除全部已读标记")
+            }
+            importMsg?.let { msg ->
+                Spacer(Modifier.height(8.dp))
+                Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
 
             Spacer(Modifier.height(24.dp))

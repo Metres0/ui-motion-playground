@@ -63,8 +63,27 @@ object FeedCatalog {
             defaultEnabled = false,
             seed = 6,
         ),
+        // v1.10：新增源（CNBeta / Hacker News / arXiv AI）
+        FeedSource(
+            id = "cnbeta",
+            title = "CNBeta 中文业界资讯",
+            description = "IT 业界资讯与科技快讯",
+            url = "https://www.cnbeta.com.tw/backend.php",
+            category = FeedCategory.TECH,
+            defaultEnabled = false,
+            seed = 31,
+        ),
 
         // ── AI ────────────────────────────────
+        FeedSource(
+            id = "arxiv_ai",
+            title = "arXiv AI 论文",
+            description = "arXiv cs.AI 最新论文（每日更新）",
+            url = "http://export.arxiv.org/rss/cs.AI",
+            category = FeedCategory.AI,
+            defaultEnabled = false,
+            seed = 32,
+        ),
         FeedSource(
             id = "qbitai",
             title = "量子位",
@@ -123,6 +142,15 @@ object FeedCatalog {
         ),
 
         // ── 国际 ──────────────────────────────
+        FeedSource(
+            id = "hackernews",
+            title = "Hacker News",
+            description = "硅谷科技社区热点（Y Combinator）",
+            url = "https://news.ycombinator.com/rss",
+            category = FeedCategory.WORLD,
+            defaultEnabled = false,
+            seed = 33,
+        ),
         FeedSource(
             id = "verge",
             title = "The Verge",

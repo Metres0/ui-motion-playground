@@ -163,6 +163,8 @@ fun AppNav(
                     translator = translator,
                     updateSettings = updateSettings,
                     themeSettings = themeSettings,
+                    subscriptionStore = store,
+                    readingState = readingState,
                     onBack = { nav.popBackStack() },
                 )
             }

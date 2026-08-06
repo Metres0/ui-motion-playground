@@ -12,6 +12,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.example.feedlite.data.ArticleFetcher
+import java.io.File
 import com.example.feedlite.data.FullTextCache
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssRepository
@@ -31,7 +32,10 @@ class MainActivity : ComponentActivity() {
         val store = SubscriptionStore(applicationContext)
         val repository = RssRepository(applicationContext)
         val translationStore = TranslationStore(applicationContext)
-        val translator = Translator(translationStore)
+        val translator = Translator(
+            translationStore,
+            File(filesDir, "translations"),
+        )
         val updateSettings = UpdateSettings(applicationContext)
         val fetcher = ArticleFetcher(FullTextCache(applicationContext))
         val readingState = ReadingStateStore(applicationContext)

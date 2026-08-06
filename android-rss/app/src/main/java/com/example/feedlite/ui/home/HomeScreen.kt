@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -116,6 +117,7 @@ fun SharedTransitionScope.HomeScreen(
     val sources by viewModel.sources.collectAsState()
     val enabled by viewModel.enabled.collectAsState()
     val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
+    val laterCount = remember(readVersion) { readingState.readLaterItems().size } // ★ 挂起数角标
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -169,6 +171,24 @@ fun SharedTransitionScope.HomeScreen(
                         }
                     },
                     actions = {
+                        // ★ 稍后再看角标（点击直接进挂起列表）
+                        Box {
+                            IconButton(onClick = onOpenLater) {
+                                Icon(Icons.Default.Bookmarks, contentDescription = "稍后再看")
+                            }
+                            if (laterCount > 0) {
+                                Badge(
+                                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = 4.dp),
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                ) {
+                                    Text(
+                                        if (laterCount > 99) "99+" else "$laterCount",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                    )
+                                }
+                            }
+                        }
                         IconButton(onClick = viewModel::refresh) {
                             Icon(Icons.Default.Refresh, contentDescription = "刷新全部")
                         }
@@ -396,9 +416,24 @@ private fun DrawerContent(
         }
         HorizontalDivider()
 
-        // ★ 按分类分组展示
+        // ★ 源搜索框（v1.10）
+        var search by remember { mutableStateOf("") }
+        OutlinedTextField(
+            value = search,
+            onValueChange = { search = it },
+            placeholder = { Text("搜索源 / 分类…") },
+            singleLine = true,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 4.dp),
+        )
+
+        // ★ 按分类分组展示（支持搜索过滤）
+        val kw = search.trim()
         FeedCategory.ORDER.forEach { cat ->
-            val list = sources.filter { it.category == cat }
+            val list = sources.filter { it.category == cat }.filter {
+                kw.isEmpty() || it.title.contains(kw, true) || it.description.contains(kw, true) || cat.contains(kw, true)
+            }
             if (list.isNotEmpty()) {
                 Text(
                     cat,
