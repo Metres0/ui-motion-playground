@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -77,10 +78,11 @@ fun SharedTransitionScope.ReadLaterScreen(
     LaunchedEffect(version) { items = readingState.readLaterItems() }
 
     // ★ v1.19：浮动图标行（无 TopAppBar 大标题）
-    // ★ v1.27：AppNav Scaffold 不再推状态栏 inset，这里自己处理一次
+    // ★ v1.29：安全区覆盖挖孔/圆角
     Box(
         Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.displayCutout)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         if (items.isEmpty()) {

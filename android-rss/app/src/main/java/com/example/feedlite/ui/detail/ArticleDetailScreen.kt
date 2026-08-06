@@ -13,13 +13,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.ClickableText
@@ -184,58 +188,70 @@ fun SharedTransitionScope.ArticleDetailScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showReadingPanel = true }) {
-                        Icon(Icons.Default.FormatSize, contentDescription = "阅读设置")
-                    }
-                    // ★ 收藏
-                    IconButton(onClick = { toggleStar() }) {
-                        Icon(
-                            if (starred) Icons.Default.Star else Icons.Default.StarBorder,
-                            contentDescription = if (starred) "取消收藏" else "收藏",
-                            tint = if (starred) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                        )
-                    }
-                    // ★ 稍后再看（书签）
-                    IconButton(onClick = { toggleLater() }) {
-                        Icon(
-                            if (later) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = if (later) "移出稍后再看" else "稍后再看",
-                            tint = if (later) MaterialTheme.colorScheme.primary else Color.Unspecified,
-                        )
-                    }
-                    // ★ v1.25：分享文章
-                    if (item != null) {
-                        IconButton(onClick = {
+            // ★ v1.29：自定义沉浸式顶栏——适配挖孔/圆角，图标统一 40dp/22dp 不再挤压变形
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.displayCutout)
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(22.dp))
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { showReadingPanel = true }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.FormatSize, contentDescription = "阅读设置", modifier = Modifier.size(22.dp))
+                }
+                // ★ 收藏
+                IconButton(onClick = { toggleStar() }, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        if (starred) Icons.Default.Star else Icons.Default.StarBorder,
+                        contentDescription = if (starred) "取消收藏" else "收藏",
+                        tint = if (starred) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                // ★ 稍后再看（书签）
+                IconButton(onClick = { toggleLater() }, modifier = Modifier.size(40.dp)) {
+                    Icon(
+                        if (later) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = if (later) "移出稍后再看" else "稍后再看",
+                        tint = if (later) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+                // ★ v1.25：分享文章
+                if (item != null) {
+                    IconButton(
+                        onClick = {
                             val share = Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
                                 putExtra(Intent.EXTRA_SUBJECT, item.title)
                                 putExtra(Intent.EXTRA_TEXT, "${item.title}\n${item.link}")
                             }
                             context.startActivity(Intent.createChooser(share, "分享文章"))
-                        }) {
-                            Icon(Icons.Default.Share, contentDescription = "分享")
-                        }
+                        },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = "分享", modifier = Modifier.size(22.dp))
                     }
-                    IconButton(onClick = { viewModel.translate() }) {
-                        Icon(Icons.Default.Translate, contentDescription = "翻译全文")
-                    }
-                    if (item != null && item.link.isNotBlank()) {
-                        IconButton(onClick = {
+                }
+                IconButton(onClick = { viewModel.translate() }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Default.Translate, contentDescription = "翻译全文", modifier = Modifier.size(22.dp))
+                }
+                if (item != null && item.link.isNotBlank()) {
+                    IconButton(
+                        onClick = {
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.link)))
-                        }) {
-                            Icon(Icons.Default.OpenInNew, contentDescription = "在浏览器打开")
-                        }
+                        },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(Icons.Default.OpenInNew, contentDescription = "在浏览器打开", modifier = Modifier.size(22.dp))
                     }
-                },
-            )
+                }
+            }
         },
     ) { padding ->
         if (item == null) {

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -120,10 +121,11 @@ fun SharedTransitionScope.HomeScreen(
             }
     }
 
-    // ★ 顶部纯内容（状态栏安全区）——不再有任何顶部按钮，空间全部留给文章
+    // ★ 顶部纯内容（沉浸式安全区：挖孔/圆角 + 状态栏兜底）——不再有任何顶部按钮
     Box(
         Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.displayCutout)
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
         when (val s = state) {

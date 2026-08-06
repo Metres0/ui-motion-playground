@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 设置页源管理（二级页）+ AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.28**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.29**。
 
 ---
 
@@ -28,6 +28,13 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.29 更新日志
+
+1. **挖孔/圆角适配**：隐藏状态栏后各页面统一 `displayCutout` + `statusBars` 双安全区 padding，
+   内容不再顶进刘海/挖孔区，四角圆角正确避让；
+2. **详情页沉浸式顶栏重设计**：弃用原 TopAppBar（自带 inset 导致错位变形），改为自定义浮动顶栏——
+   返回/阅读设置/收藏/稍后再看/分享/翻译/打开浏览器 图标统一 40dp 按钮 + 22dp 图标，规整不再挤压。
 
 ## 二、v1.28 更新日志
 
@@ -285,7 +292,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.28 / versionCode 29 |
+| 版本 | versionName 1.29 / versionCode 30 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
