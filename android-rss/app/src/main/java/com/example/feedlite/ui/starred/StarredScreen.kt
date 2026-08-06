@@ -107,9 +107,9 @@ fun SharedTransitionScope.StarredScreen(
         ) {
             IconButton(
                 onClick = { exportLauncher.launch("feedlite_favorites.json") },
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(44.dp),
             ) {
-                Icon(Icons.Default.Share, contentDescription = "导出收藏", modifier = Modifier.size(22.dp))
+                Icon(Icons.Default.Share, contentDescription = "导出收藏", modifier = Modifier.size(26.dp))
             }
         }
         if (items.isEmpty()) {
@@ -127,7 +127,7 @@ fun SharedTransitionScope.StarredScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items.size, key = { items[it].key }) { i ->

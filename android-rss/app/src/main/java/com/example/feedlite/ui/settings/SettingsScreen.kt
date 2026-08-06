@@ -133,7 +133,7 @@ fun SettingsScreen(
         Text(
             "设置",
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(start = 16.dp, top = 22.dp),
+            modifier = Modifier.padding(start = 16.dp, top = 26.dp),
         )
         Column(Modifier.padding(16.dp)) {
 

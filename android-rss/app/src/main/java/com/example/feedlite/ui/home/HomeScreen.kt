@@ -49,7 +49,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -192,16 +191,16 @@ fun SharedTransitionScope.HomeScreen(
             ) {
                 IconButton(
                     onClick = { coroutineScope.launch { drawerState.open() } },
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(44.dp),
                 ) {
-                    Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(
                     onClick = viewModel::refresh,
-                    modifier = Modifier.size(36.dp),
+                    modifier = Modifier.size(44.dp),
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(24.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(28.dp))
                 }
             }
 
@@ -245,7 +244,7 @@ fun SharedTransitionScope.HomeScreen(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             // ★ 顶部留图标行 + 呼吸间距
-                            contentPadding = PaddingValues(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            contentPadding = PaddingValues(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
                             items(entries.size, key = { entries[it].item.key }) { i ->
                                 val entry = entries[i]
@@ -395,7 +394,7 @@ private fun DrawerContent(
             .verticalScroll(rememberScrollState())
             .padding(bottom = 24.dp),
     ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+        Column(Modifier.padding(start = 28.dp, top = 16.dp, end = 20.dp, bottom = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
@@ -422,7 +421,7 @@ private fun DrawerContent(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 4.dp),
+                .padding(start = 28.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
         )
 
         // ★ 按分类分组展示（支持搜索过滤）
@@ -436,7 +435,7 @@ private fun DrawerContent(
                     cat,
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
+                    modifier = Modifier.padding(start = 28.dp, top = 12.dp, bottom = 4.dp),
                 )
                 list.forEach { source ->
                     DrawerSourceRow(
@@ -450,52 +449,66 @@ private fun DrawerContent(
             }
         }
 
-        NavigationDrawerItem(
-            label = { Text("添加订阅源") },
-            icon = { Icon(Icons.Default.Add, contentDescription = null) },
-            selected = false,
+        // ★ v1.21：统一对齐行——图标 26dp 贴左缘(x=2)，文本起点=28dp 与文章标题对齐
+        DrawerNavItem(
+            label = "添加订阅源",
+            icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(26.dp)) },
             onClick = onAdd,
-            modifier = Modifier.padding(horizontal = 12.dp),
         )
-        NavigationDrawerItem(
-            label = { Text("公众号 / 微博转源帮助") },
+        DrawerNavItem(
+            label = "公众号 / 微博转源帮助",
             icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            selected = false,
             onClick = onConvertHelp,
-            modifier = Modifier.padding(horizontal = 12.dp),
         )
 
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
         // ★ 我的收藏
-        NavigationDrawerItem(
-            label = { Text("我的收藏") },
+        DrawerNavItem(
+            label = "我的收藏",
             icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            selected = false,
             onClick = onOpenStarred,
-            modifier = Modifier.padding(horizontal = 12.dp),
         )
         // ★ 稍后再看
-        NavigationDrawerItem(
-            label = { Text("稍后再看") },
+        DrawerNavItem(
+            label = "稍后再看",
             icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            selected = false,
             onClick = onOpenLater,
-            modifier = Modifier.padding(horizontal = 12.dp),
         )
-        NavigationDrawerItem(
-            label = { Text("设置") },
+        DrawerNavItem(
+            label = "设置",
             icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            selected = false,
             onClick = onOpenSettings,
-            modifier = Modifier.padding(horizontal = 12.dp),
         )
-        NavigationDrawerItem(
-            label = { Text("关于") },
+        DrawerNavItem(
+            label = "关于",
             icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            selected = false,
             onClick = onAbout,
-            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+    }
+}
+
+/** ★ 抽屉对齐行：图标 26dp 贴左缘，文本从 28dp 开始（与首页文章标题对齐）。 */
+@Composable
+private fun DrawerNavItem(
+    label: String,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(start = 2.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon()
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -513,23 +526,23 @@ private fun DrawerSourceRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(start = 20.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+            // ★ v1.21：徽章 26dp 贴左缘(x=2)，源名文本起点=28dp 与文章标题对齐
+            .padding(start = 2.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(32.dp)
+                .size(26.dp)
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = source.initial,
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary,
             )
         }
-        Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(source.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
