@@ -132,8 +132,8 @@ fun SettingsScreen(
     ) {
         Text(
             "设置",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(start = 16.dp, top = 14.dp),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(start = 16.dp, top = 22.dp),
         )
         Column(Modifier.padding(16.dp)) {
 

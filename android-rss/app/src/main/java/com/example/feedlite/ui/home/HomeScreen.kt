@@ -192,16 +192,16 @@ fun SharedTransitionScope.HomeScreen(
             ) {
                 IconButton(
                     onClick = { coroutineScope.launch { drawerState.open() } },
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
-                    Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(24.dp))
                 }
                 Spacer(Modifier.weight(1f))
                 IconButton(
                     onClick = viewModel::refresh,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(36.dp),
                 ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(14.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(24.dp))
                 }
             }
 
@@ -244,8 +244,8 @@ fun SharedTransitionScope.HomeScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            // ★ 顶部只留图标行高度，内容紧贴
-                            contentPadding = PaddingValues(top = 26.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            // ★ 顶部留图标行 + 呼吸间距
+                            contentPadding = PaddingValues(top = 40.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
                             items(entries.size, key = { entries[it].item.key }) { i ->
                                 val entry = entries[i]
