@@ -1,8 +1,8 @@
 # FeedLite「轻阅 RSS」— 基于 Android 16 的 RSS 阅读器
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
-首页聚合流 + 侧边栏源管理 + AI 翻译；全程 Compose 动效（共享元素转场 / stagger /
-渐进式图片），针对 **Android 16（API 36）** 构建，**v1.1**。
+首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.2**。
 
 ---
 
@@ -10,28 +10,35 @@
 
 | 功能 | 说明 |
 |---|---|
-| 首页聚合流 | 并行抓取所有启用源，合并为统一文章流 |
-| 侧边栏导航 | 汉堡菜单抽屉：源管理（开关/添加/删除）、翻译设置、关于 |
-| 内置 8 个 RSS 源 | 默认启用 4 个国内可达源，其余可一键启用 |
+| 首页聚合流 | 并行抓取所有启用源，按「技术/AI/Go/商业/国际」**分类分段**展示 |
+| 侧边栏导航 | 分类分组的源管理（开关/添加/删除）、转源帮助、设置、关于 |
+| 内置 **13 个 RSS 源** | 新增 AI 类（量子位/OpenAI/HuggingFace/Google AI）与 Go 官方博客 |
 | 自定义源 | 抽屉内对话框输入名称 + Feed 地址，可添加 / 删除 |
+| **公众号 / 微博转源** | 侧边栏「转源帮助」：Wechat2RSS / RSSHub 部署与路由说明 |
 | 先加载 5 篇 | 进入文章列表只展示前 5 篇（一次网络请求） |
 | 点击加载更多 | 底部按钮每次追加 5 篇，直至「已加载全部」 |
-| **AI 翻译** | 详情页一键翻译全文；API Key/模型/服务商可配置（DeepSeek / MiMo / 自定义 OpenAI 兼容） |
-| 图片优化 | 列表 360px / 详情 1280px 限制解码尺寸；协议相对与相对路径 URL 规范化 |
-| 文章详情 | 大图、标题、作者、日期、正文（HTML→纯文本）、浏览器打开 |
+| **富文本排版** | 标题/段落/列表/引用/代码块（深色块+等宽+复制），行内加粗/斜体/链接 |
+| **阅读设置** | 字号缩放（85%~140%）、行高（1.2~2.0）、字体（无衬线/衬线/等宽） |
+| **AI 翻译** | 详情页一键翻译全文；**代码块自动提取、不参与翻译**；服务商/Key/模型可配置 |
+| 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
 
-## 二、v1.1 更新日志
+## 二、v1.2 更新日志
 
-1. **修复崩溃**：阮一峰等文章数 < 5 的源加载时 `IndexOutOfBoundsException` 闪退
-   —— `visibleCount = minOf(5, items.size)` 防御；
-2. **解析器加固**：`content:encoded` 等带命名空间标签按 localName 匹配；
-   图片 URL 协议相对（`//host`）/ 根相对（`/path`）自动补全；
-   解析异常部分成功兜底，坏条目不再拖垮整页；
-3. **HTML 安全**：数字实体解码过滤代理区与非法 code point，杜绝 `toChars` 闪退；
-4. **图片优化**：Coil 按用途限制解码尺寸（缩略图 360 / 详情 1280），内存减半；
-5. **UI 改版**：源管理移入侧边栏，首页改为聚合文章流；
-6. **新增翻译**：OpenAI 兼容 chat/completions，配置 API Key 即可用。
+1. **图片修复**：全局 Coil OkHttp 拦截器自动携带 `Referer` + 完整 UA，解决
+   theverge/部分中文站图片防盗链；`usesCleartextTraffic` 兼容 http 图片源；
+   解析器支持 `srcset`、`media:thumbnail`、enclosure(image) 提取，data URI 忽略；
+2. **排版优化**：新增 `HtmlBlocks` 轻量 HTML→Compose 渲染器（标题/段落/有序无序列表/
+   引用/分隔线/代码块），详情页从纯文本升级为富文本；代码块深色背景 + 等宽字体 +
+   一键复制；
+3. **阅读设置**：设置页新增字号/行高/字体三组调节，即时应用于详情页；
+4. **翻译保护代码块**：`CodeBlockExtractor` 在翻译前提取 `<pre>` 代码块为占位符，
+   译文还原代码原文，**代码永不参与翻译**；
+5. **新增 5 个源**（共 13 个）：量子位（AI，默认开）、OpenAI News、Hugging Face、
+   Google AI、Go 官方博客（默认开）；
+6. **源分类**：技术 / AI / Go / 商业 / 国际 / 自定义，首页按分类分段、侧边栏按分类分组；
+7. **公众号/微博转源**：应用内「转源帮助」对话框 + 本文档第八章，说明
+   Wechat2RSS（自建）与 RSSHub 路由的接入方式。
 
 ## 三、技术栈（Android 16）
 
@@ -39,7 +46,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.1 / versionCode 2 |
+| 版本 | versionName 1.2 / versionCode 3 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
@@ -99,36 +106,59 @@
 > **UI 增量渲染策略**（一次网络请求、按需呈现），首屏只有 5 张卡片要布局/解码，
 > 低端机也流畅；其余条目零成本待命。
 
-## 四、动效设计（token 全复用）
+## 五、动效设计（token 全复用）
 
 | 效果 | 实现 | token |
 |---|---|---|
 | 页面进入（订阅→列表→详情） | `slideIntoContainer(Left)` + fadeIn | 350ms + emphasized |
 | 页面退出 / 返回 | `slideOutOfContainer(Right)` + fadeOut | 90ms + emphasized |
 | 列表 stagger | `delay(index % 10 * 30ms)` → 位移+淡入 | 30ms/项 + standard |
-| 共享元素 | 封面 `thumb_{key}` / 源徽章 `source_{id}` | 350ms + emphasized |
+| 共享元素 | 封面 `thumb_{key}` | 350ms + emphasized |
 | 渐进式图片 | 模糊色块 → Coil crossfade(300) | 300ms + standard |
-| 微交互 | Switch 原生 / 按钮按压 | spring |
+| 代码块复制反馈 | 系统触摸反馈 | — |
 
 详细 token 表见仓库根目录 **`motion-tokens.md`**（唯一事实来源）。
 
-## 五、内置订阅源
+## 六、内置订阅源（13 个 · 按分类）
 
-| 源 | 默认启用 | 类型 |
+| 分类 | 源 | 默认启用 |
 |---|---|---|
-| 阮一峰的网络日志 | ✅ | Atom |
-| 少数派 sspai | ✅ | RSS 2.0 |
-| V2EX | ✅ | RSS 2.0 |
-| InfoQ 中文 | ✅ | RSS 2.0 |
-| 36氪 | ⬜ | RSS 2.0 |
-| The Verge | ⬜ | RSS 2.0 |
-| BBC News | ⬜ | RSS 2.0 |
-| NASA Breaking News | ⬜ | RSS 2.0 |
+| 技术 | 阮一峰的网络日志 | ✅ |
+| 技术 | 少数派 sspai | ✅ |
+| 技术 | V2EX | ✅ |
+| 技术 | InfoQ 中文 | ✅ |
+| AI | 量子位 | ✅ |
+| AI | Hugging Face Blog | ⬜ |
+| AI | OpenAI News | ⬜ |
+| AI | Google AI Blog | ⬜ |
+| Go | Go 官方博客 | ✅ |
+| 商业 | 36氪 | ⬜ |
+| 国际 | The Verge | ⬜ |
+| 国际 | BBC News | ⬜ |
+| 国际 | NASA Breaking News | ⬜ |
 
 > 可达性因网络环境而异；抓取失败会在列表页显示原因并可重试，
 > 不影响其他源。若全部失败请检查网络/代理。
 
-## 六、构建与签名
+## 七、公众号 / 微博 转 RSS
+
+RSS 协议本身不含公众号/微博内容，需要中间服务把它们转成标准 feed，再把地址
+粘贴到「添加订阅源」。
+
+### 微信公众号
+1. **Wechat2RSS**（wechat2rss.xlab.app，开源 [ttttmr/wechat2rss](https://github.com/ttttmr/wechat2rss)）：
+   自建服务后，把公众号链接（mp.weixin.qq.com/...）提交，获得对应 RSS 地址；
+2. **RSSHub**（github.com/DIYgod/RSSHub）`/wechat/` 相关路由，公共实例可能不稳定，建议自建；
+3. 把得到的 feed 地址粘贴到本应用的「添加订阅源」。
+
+### 微博
+1. 自建 **RSSHub**，使用路由 `/weibo/user/{uid}`；
+2. `uid` 是微博用户数字 ID（个人主页 URL 中可见）；
+3. 公共实例可能限流/失效（RSSHub issue 中微博路由偶发 432/受限），自建最稳。
+
+> 应用内侧边栏 → 「公众号 / 微博转源帮助」内置了上述说明。
+
+## 八、构建与签名
 
 ### 前置条件（本机已配好）
 
@@ -161,7 +191,7 @@ $env:FEEDLITE_KEY_PASS  = "你的key密码"
 > 仓库内 `app/build.gradle.kts` 保留了本机演示用的默认密码，
 > 仅当本地存在 keystore 文件时才生效；**正式发布请更换 keystore 并改走环境变量**。
 
-## 七、安装与验证
+## 九、安装与验证
 
 ```powershell
 # 方式一：直接拷贝 app-release.apk 到手机安装（需允许未知来源）
@@ -179,7 +209,7 @@ C:\Android\sdk\platform-tools\adb.exe install -r app\build\outputs\apk\release\a
 7. 添加自定义源（如 `https://feeds.bbci.co.uk/news/rss.xml`）→ 出现在列表并可进入；
 8. 杀掉进程重开 → 订阅状态保留。
 
-## 八、已知限制
+## 十、已知限制
 
 - RSS 正文仅展示 description/summary 的纯文本（未抓取全文页）；
 - 封面图依赖源提供的 enclosure/media 或正文首图，缺图显示柔和色块；

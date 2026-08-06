@@ -6,15 +6,13 @@ import org.xmlpull.v1.XmlPullParserException
 import java.io.InputStream
 
 /**
- * 极简 RSS / Atom 解析器（加固版）。
+ * 极简 RSS / Atom 解析器（v1.2 加固版）。
  *
- * 基于 Android 内置 XmlPullParser，兼容 RSS 2.0 与 Atom：
- * - 开启 namespace 处理后 `parser.name` 返回 **localName**（如 `content:encoded` → `encoded`、
- *   `dc:creator` → `creator`、`media:thumbnail` → `thumbnail`），按 localName 匹配即可；
- * - Atom `<content>` / 普通 `<description>` 内常为 CDATA 包裹的 HTML，XmlPullParser 会将其
- *   作为 TEXT 返回，逐段拼接即可；
- * - 图片 URL 支持协议相对（//host）与相对路径（/path）规范化补全；
- * - 解析异常时返回**已解析部分**（部分成功优于整体失败），避免个别坏 item 拖垮全列表。
+ * - localName 匹配（content:encoded → encoded、dc:creator → creator、media:thumbnail → thumbnail）；
+ * - 封面图来源优先级：enclosure(image) > media:thumbnail > media:content > 正文首图(srcset 优先)；
+ * - data URI（36kr 等 base64 内联图）直接忽略 → 显示占位色；
+ * - 图片 URL 协议相对（//host）/ 根相对（/path）自动补全；
+ * - 解析异常部分成功兜底。
  */
 object RssParser {
 
@@ -24,6 +22,7 @@ object RssParser {
         parser.setInput(stream, "UTF-8")
 
         val feedBase = source.url
+        val feedHost = runCatching { java.net.URI(source.url).host }.getOrNull()
 
         var feedTitle = source.title
         var feedLink = ""
@@ -48,7 +47,6 @@ object RssParser {
                                 current = linkedMapOf()
                             }
                             inItem && current != null -> {
-                                // Atom: <link href="..."> 属性形式（可能有多个 link，取 alternate）
                                 if (tag == "link") {
                                     val rel = parser.getAttributeValue(null, "rel")
                                     val href = parser.getAttributeValue(null, "href")
@@ -58,10 +56,18 @@ object RssParser {
                                         }
                                     }
                                 }
-                                // 封面：enclosure / media:content / media:thumbnail / atom:logo
-                                if (tag == "enclosure" || tag == "thumbnail" || tag == "content") {
+                                // 封面图：enclosure(type=image) / media:thumbnail / media:content / atom:logo
+                                if (tag == "enclosure") {
+                                    val type = parser.getAttributeValue(null, "type") ?: ""
+                                    if (type.startsWith("image")) {
+                                        current!!["imageUrl"] = parser.getAttributeValue(null, "url").orEmpty()
+                                    }
+                                } else if (tag == "thumbnail") {
                                     val url = parser.getAttributeValue(null, "url")
-                                    if (!url.isNullOrBlank() && looksLikeImage(url)) {
+                                    if (!url.isNullOrBlank()) current!!["imageUrl"] = url
+                                } else if (tag == "content") {
+                                    val url = parser.getAttributeValue(null, "url")
+                                    if (!url.isNullOrBlank() && looksLikeImageUrl(url)) {
                                         current!!["imageUrl"] = url
                                     }
                                 }
@@ -81,7 +87,6 @@ object RssParser {
                                 when (currentTag) {
                                     "title" -> current!!["title"] = current!!["title"].orEmpty() + text
                                     "link" -> if (current!!["link"].isNullOrEmpty()) current!!["link"] = text.trim()
-                                    // localName 映射：description / summary / content:encoded / content
                                     "description", "summary", "encoded", "content" ->
                                         current!!["description"] = current!!["description"].orEmpty() + text
                                     "pubDate", "published", "updated" ->
@@ -111,6 +116,7 @@ object RssParser {
                                         pubDate = m["pubDate"].orEmpty(),
                                         author = m["author"].orEmpty(),
                                         imageUrl = normalizeImageUrl(rawImage, feedBase),
+                                        feedHost = feedHost,
                                         key = "${source.id}_${itemCount}_${m["link"].orEmpty().trim()}",
                                     )
                                     itemCount++
@@ -124,10 +130,9 @@ object RssParser {
                 event = parser.next()
             }
         } catch (e: XmlPullParserException) {
-            // 单个 feed 解析中途失败：保留已解析条目，不抛异常导致整页失败
-            // （解析器在 END_DOCUMENT 前中断时，最后一条未闭合的 item 丢弃）
+            // 部分成功兜底
         } catch (e: Exception) {
-            // 其他解析异常同样部分成功兜底
+            // 其他解析异常同样部分成功
         }
         return RssFeed(
             source = source,
@@ -138,15 +143,25 @@ object RssParser {
         )
     }
 
-    /** 提取 HTML 片段中的第一张图 URL。 */
+    /**
+     * 提取 HTML 片段中的第一张图 URL。
+     * 优先 srcset 第一项；跳过 data: URI。
+     */
     private fun extractFirstImage(html: String): String? {
         if (html.isEmpty()) return null
+        val srcsetRegex = Regex("""<img[^>]+srcset=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
+        val srcset = srcsetRegex.find(html)?.groupValues?.get(1)
+        if (!srcset.isNullOrBlank()) {
+            val first = srcset.split(',').firstOrNull()?.trim()?.substringBefore(' ')
+            if (!first.isNullOrBlank() && !first.startsWith("data:")) return first
+        }
         val regex = Regex("""<img[^>]+src=["']([^"']+)["']""", RegexOption.IGNORE_CASE)
-        return regex.find(html)?.groupValues?.get(1)?.trim()
+        val src = regex.find(html)?.groupValues?.get(1)?.trim()
+        return src?.takeIf { !it.startsWith("data:") }
     }
 
-    /** 判断 URL 是否像图片资源（避免把页面 URL 误当封面）。 */
-    private fun looksLikeImage(url: String): Boolean {
+    private fun looksLikeImageUrl(url: String): Boolean {
+        if (url.startsWith("data:")) return false
         val clean = url.substringBefore('?').lowercase()
         return clean.endsWith(".jpg") || clean.endsWith(".jpeg") || clean.endsWith(".png") ||
             clean.endsWith(".webp") || clean.endsWith(".gif") || clean.endsWith(".avif") ||
@@ -154,14 +169,11 @@ object RssParser {
     }
 
     /**
-     * 图片 URL 规范化：
-     * - `//host/...`（协议相对）→ 补 https:
-     * - `/path/...`（根相对）  → 基于 feed 域名补全
-     * - 其他非法/空 → null（界面显示占位色）
+     * 图片 URL 规范化：http(s)/协议相对/根相对；data URI 与非法值返回 null（显示占位色）。
      */
     private fun normalizeImageUrl(raw: String?, feedUrl: String?): String? {
         val url = raw?.trim().orEmpty()
-        if (url.isEmpty()) return null
+        if (url.isEmpty() || url.startsWith("data:")) return null
         return when {
             url.startsWith("http://") || url.startsWith("https://") -> url
             url.startsWith("//") -> "https:$url"

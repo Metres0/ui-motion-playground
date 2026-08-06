@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Refresh
@@ -50,6 +51,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -72,6 +74,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.data.FeedCategory
 import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.RssItem
@@ -83,8 +86,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * 首页 = 聚合文章流 + 侧边栏（源管理 / 设置 / 关于）。
- * 源的管理不再占用独立页面，全部收敛进抽屉。
+ * 首页 = 聚合文章流（按分类分段）+ 侧边栏（分类分组的源管理 / 设置 / 关于 / 转源帮助）。
  */
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -107,6 +109,7 @@ fun SharedTransitionScope.HomeScreen(
     val coroutineScope = rememberCoroutineScope()
     var showAddDialog by remember { mutableStateOf(false) }
     var showAbout by remember { mutableStateOf(false) }
+    var showConvertHelp by remember { mutableStateOf(false) }
 
     fun closeDrawer() {
         coroutineScope.launch { drawerState.close() }
@@ -119,9 +122,7 @@ fun SharedTransitionScope.HomeScreen(
                 DrawerContent(
                     sources = sources,
                     enabled = enabled,
-                    onToggle = { id, on ->
-                        viewModel.toggleSource(id, on)
-                    },
+                    onToggle = { id, on -> viewModel.toggleSource(id, on) },
                     onOpenSource = { src ->
                         closeDrawer()
                         onOpenSource(src)
@@ -133,6 +134,7 @@ fun SharedTransitionScope.HomeScreen(
                         onOpenSettings()
                     },
                     onAbout = { showAbout = true },
+                    onConvertHelp = { showConvertHelp = true },
                 )
             }
         },
@@ -184,19 +186,35 @@ fun SharedTransitionScope.HomeScreen(
                             Button(onClick = viewModel::refresh) { Text("重试") }
                         }
                     } else {
+                        // ★ 按分类分段的聚合流
+                        val groups = FeedCategory.ORDER.mapNotNull { cat ->
+                            val list = s.entries.filter { it.source.category == cat }
+                            if (list.isEmpty()) null else cat to list
+                        }
                         LazyColumn(
                             modifier = Modifier.fillMaxSize().padding(padding),
                             contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            items(s.entries.size, key = { s.entries[it].item.key }) { i ->
-                                val entry = s.entries[i]
-                                HomeArticleCard(
-                                    entry = entry,
-                                    index = i,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    onClick = { onOpenArticle(entry.item) },
-                                )
+                            groups.forEach { (cat, list) ->
+                                item(key = "header_$cat") {
+                                    Text(
+                                        cat,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+                                    )
+                                }
+                                items(list.size, key = { list[it].item.key }) { i ->
+                                    val entry = list[i]
+                                    HomeArticleCard(
+                                        entry = entry,
+                                        index = i,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        onClick = { onOpenArticle(entry.item) },
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                }
                             }
                         }
                     }
@@ -208,15 +226,19 @@ fun SharedTransitionScope.HomeScreen(
     if (showAddDialog) {
         AddSourceDialog(
             onConfirm = { title, url -> viewModel.addCustom(title, url) },
+            onShowConvertHelp = { showConvertHelp = true },
             onDismiss = { showAddDialog = false },
         )
     }
     if (showAbout) {
         AboutDialog(onDismiss = { showAbout = false })
     }
+    if (showConvertHelp) {
+        ConvertHelpDialog(onDismiss = { showConvertHelp = false })
+    }
 }
 
-/** 首页聚合文章卡片（缩略图与详情共享元素转场）。 */
+/** 首页聚合文章卡片。 */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SharedTransitionScope.HomeArticleCard(
@@ -284,7 +306,7 @@ private fun SharedTransitionScope.HomeArticleCard(
     }
 }
 
-/** 侧边栏：订阅源管理 + 设置 + 关于。 */
+/** 侧边栏：订阅源（按分类分组）+ 添加源 + 设置 + 关于。 */
 @Composable
 private fun DrawerContent(
     sources: List<FeedSource>,
@@ -295,6 +317,7 @@ private fun DrawerContent(
     onDelete: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onAbout: () -> Unit,
+    onConvertHelp: () -> Unit,
 ) {
     Column(
         Modifier
@@ -312,21 +335,28 @@ private fun DrawerContent(
         }
         HorizontalDivider()
 
-        Text(
-            "订阅源",
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
-        )
-        sources.forEach { source ->
-            DrawerSourceRow(
-                source = source,
-                checked = source.id in enabled,
-                onToggle = { onToggle(source.id, it) },
-                onClick = { onOpenSource(source) },
-                onDelete = { onDelete(source.id) },
-            )
+        // ★ 按分类分组展示
+        FeedCategory.ORDER.forEach { cat ->
+            val list = sources.filter { it.category == cat }
+            if (list.isNotEmpty()) {
+                Text(
+                    cat,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = 20.dp, top = 12.dp, bottom = 4.dp),
+                )
+                list.forEach { source ->
+                    DrawerSourceRow(
+                        source = source,
+                        checked = source.id in enabled,
+                        onToggle = { onToggle(source.id, it) },
+                        onClick = { onOpenSource(source) },
+                        onDelete = { onDelete(source.id) },
+                    )
+                }
+            }
         }
+
         NavigationDrawerItem(
             label = { Text("添加订阅源") },
             icon = { Icon(Icons.Default.Add, contentDescription = null) },
@@ -334,11 +364,18 @@ private fun DrawerContent(
             onClick = onAdd,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
+        NavigationDrawerItem(
+            label = { Text("公众号 / 微博转源帮助") },
+            icon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
+            selected = false,
+            onClick = onConvertHelp,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
 
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
         NavigationDrawerItem(
-            label = { Text("翻译设置") },
+            label = { Text("设置") },
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },
             selected = false,
             onClick = onOpenSettings,
@@ -354,7 +391,7 @@ private fun DrawerContent(
     }
 }
 
-/** 抽屉中的单源行：点击进入该源，Switch 管理启用。 */
+/** 抽屉单源行：点击进入，Switch 管理启用，自定义源可删除。 */
 @Composable
 private fun DrawerSourceRow(
     source: FeedSource,
@@ -403,7 +440,11 @@ private fun DrawerSourceRow(
 
 /** 添加订阅源对话框。 */
 @Composable
-private fun AddSourceDialog(onConfirm: (String, String) -> Unit, onDismiss: () -> Unit) {
+private fun AddSourceDialog(
+    onConfirm: (String, String) -> Unit,
+    onShowConvertHelp: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     var title by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
 
@@ -425,6 +466,11 @@ private fun AddSourceDialog(onConfirm: (String, String) -> Unit, onDismiss: () -
                     label = { Text("Feed 地址（如：example.com/feed）") },
                     singleLine = true,
                 )
+                TextButton(onClick = onShowConvertHelp) {
+                    Icon(Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("公众号 / 微博怎么转成 RSS？", style = MaterialTheme.typography.labelMedium)
+                }
             }
         },
         confirmButton = {
@@ -442,18 +488,52 @@ private fun AddSourceDialog(onConfirm: (String, String) -> Unit, onDismiss: () -
     )
 }
 
+/** 转源帮助对话框：公众号 / 微博 → RSS 的路径。 */
+@Composable
+private fun ConvertHelpDialog(onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
+        title = { Text("公众号 / 微博 转 RSS") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("微信公众号", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "1. 自建 Wechat2RSS（wechat2rss.xlab.app，需一台服务器）；\n" +
+                        "2. 或使用 RSSHub 的 /wechat/ 相关路由；\n" +
+                        "3. 得到 feed 地址后，通过「添加订阅源」填入即可。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                HorizontalDivider()
+                Text("微博", style = MaterialTheme.typography.titleSmall)
+                Text(
+                    "1. 使用 RSSHub 路由 /weibo/user/{uid}；\n" +
+                        "2. uid 为微博用户数字 ID（可在个人主页 URL 中查看）；\n" +
+                        "3. 公共实例可能限流，建议自建 RSSHub（github.com/DIYgod/RSSHub）。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("知道了") }
+        },
+    )
+}
+
 /** 关于对话框。 */
 @Composable
 private fun AboutDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.Info, contentDescription = null) },
-        title = { Text("轻阅 RSS v1.1") },
+        title = { Text("轻阅 RSS v1.2") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("极简 RSS 阅读器 · 基于 Android 16")
-                Text("内置 8 个订阅源 · 支持自定义 · 集成 AI 翻译", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("动效：共享元素转场 / stagger / 渐进式图片", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("内置 13 个订阅源（技术/AI/Go/商业/国际分类）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("富文本排版 · 阅读设置 · AI 翻译（代码块保留原文）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {

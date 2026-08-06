@@ -21,6 +21,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -30,16 +31,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.TranslationStore
+import kotlin.math.roundToInt
 
 /**
- * 设置页：翻译服务配置。
- * - 服务商模板：DeepSeek / MiMo / 自定义（OpenAI 兼容）
- * - API Key 仅存本机（SharedPreferences）
+ * 设置页：
+ * - 翻译服务（服务商/URL/Key/模型/目标语言）
+ * - 阅读设置（字号 / 行高 / 字体）
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,10 +51,14 @@ fun SettingsScreen(
     store: TranslationStore,
     onBack: () -> Unit,
 ) {
+    val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(
-        factory = viewModelFactory { initializer { SettingsViewModel(store) } }
+        factory = viewModelFactory {
+            initializer { SettingsViewModel(store, ReadingSettings(context)) }
+        }
     )
     val config by viewModel.config.collectAsState()
+    val reading by viewModel.readingConfig.collectAsState()
     var saved by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -73,6 +81,8 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+
+            // ════════ 翻译服务 ════════
             Text("翻译服务", style = MaterialTheme.typography.titleMedium)
             Text(
                 "在文章详情页可将正文翻译为目标语言。密钥仅保存在本机。",
@@ -81,11 +91,10 @@ fun SettingsScreen(
             )
             Spacer(Modifier.height(12.dp))
 
-            // 服务商模板
             Text("服务商", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                com.example.feedlite.data.TranslationStore.PROVIDERS.forEach { p ->
+                TranslationStore.PROVIDERS.forEach { p ->
                     FilterChip(
                         selected = config.provider == p,
                         onClick = { viewModel.applyTemplate(p) },
@@ -131,17 +140,78 @@ fun SettingsScreen(
                 singleLine = true,
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // ════════ 阅读设置 ════════
+            Text("阅读设置", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "应用于文章详情页的正文排版。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Text("字号", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Slider(
+                value = reading.fontSizeScale,
+                onValueChange = { v -> viewModel.updateReading { it.copy(fontSizeScale = v) } },
+                valueRange = 0.85f..1.4f,
+                steps = 10,
+            )
+            Text(
+                "当前 ${(reading.fontSizeScale * 100).roundToInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text("行高", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Slider(
+                value = reading.lineHeightScale,
+                onValueChange = { v -> viewModel.updateReading { it.copy(lineHeightScale = v) } },
+                valueRange = 1.2f..2.0f,
+                steps = 8,
+            )
+            Text(
+                "当前 ${(reading.lineHeightScale * 100).roundToInt()}%",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+
+            Text("字体", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = reading.fontFamily == ReadingSettings.FONT_SANS,
+                    onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_SANS) } },
+                    label = { Text("无衬线") },
+                )
+                FilterChip(
+                    selected = reading.fontFamily == ReadingSettings.FONT_SERIF,
+                    onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_SERIF) } },
+                    label = { Text("衬线") },
+                )
+                FilterChip(
+                    selected = reading.fontFamily == ReadingSettings.FONT_MONO,
+                    onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_MONO) } },
+                    label = { Text("等宽") },
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))
 
             Button(
                 onClick = {
-                    error = viewModel.save()
+                    error = viewModel.saveAll()
                     if (error == null) saved = true
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("保存配置") }
+            ) { Text("保存全部设置") }
 
             if (saved && error == null) {
                 Spacer(Modifier.height(8.dp))
@@ -154,8 +224,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(24.dp))
             Text(
-                "安全提示：当前版本将 API Key 明文存于本机，仅供个人使用；" +
-                    "正式发布请改用 Android Keystore 加密存储。",
+                "安全提示：API Key 明文存于本机，仅供个人使用；正式发布请改用 Keystore 加密存储。",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
             )

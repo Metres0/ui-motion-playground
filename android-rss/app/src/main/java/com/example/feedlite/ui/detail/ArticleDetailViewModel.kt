@@ -2,6 +2,8 @@ package com.example.feedlite.ui.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.feedlite.data.CodeBlockExtractor
+import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.ui.ArticleCache
@@ -18,9 +20,13 @@ sealed interface TranslationUiState {
 }
 
 /**
- * 详情页 ViewModel：管理翻译状态。
- * - 译文按文章 key 缓存在 [ArticleCache.translations]，重复进入秒开；
- * - 未配置 API Key 时给出引导提示。
+ * 详情页 ViewModel。
+ *
+ * 翻译流程（v1.2）：
+ * 1. 从原文 HTML 提取 <pre> 代码块 → 占位符（**代码块不参与翻译**）；
+ * 2. 占位文本 → 纯文本 → 调用翻译接口；
+ * 3. 译文还原占位符 → 代码块原文；
+ * 4. 结果缓存到 [ArticleCache.translations]。
  */
 class ArticleDetailViewModel(
     private val articleKey: String,
@@ -34,12 +40,17 @@ class ArticleDetailViewModel(
     )
     val translation: StateFlow<TranslationUiState> = _translation.asStateFlow()
 
-    fun translate(originalText: String) {
+    fun translate() {
         if (_translation.value is TranslationUiState.Done || _translation.value is TranslationUiState.Translating) return
 
         val cached = ArticleCache.translations[articleKey]
         if (cached != null) {
             _translation.value = TranslationUiState.Done(cached)
+            return
+        }
+        val item = ArticleCache.get(articleKey)
+        if (item == null) {
+            _translation.value = TranslationUiState.Error("文章不存在")
             return
         }
         if (!store.isConfigured()) {
@@ -50,16 +61,19 @@ class ArticleDetailViewModel(
         viewModelScope.launch {
             _translation.value = TranslationUiState.Translating
             try {
-                val result = translator.translate(originalText)
-                ArticleCache.translations[articleKey] = result
-                _translation.value = TranslationUiState.Done(result)
+                val extracted = CodeBlockExtractor.extract(item.descriptionHtml)
+                val textForTranslate = HtmlText.toPlainText(extracted.placeholderText)
+                if (textForTranslate.isBlank()) {
+                    _translation.value = TranslationUiState.Error("没有可翻译的内容")
+                    return@launch
+                }
+                val rawResult = translator.translate(textForTranslate)
+                val restored = CodeBlockExtractor.restore(rawResult, extracted.codes)
+                ArticleCache.translations[articleKey] = restored
+                _translation.value = TranslationUiState.Done(restored)
             } catch (e: Exception) {
                 _translation.value = TranslationUiState.Error(e.message ?: "翻译失败，请重试")
             }
         }
-    }
-
-    fun reset() {
-        _translation.value = TranslationUiState.Idle
     }
 }

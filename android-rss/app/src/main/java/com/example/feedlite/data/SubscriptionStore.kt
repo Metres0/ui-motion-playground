@@ -7,17 +7,13 @@ import org.json.JSONObject
 
 /**
  * 订阅状态持久化（SharedPreferences + JSON）。
- *
- * 维护两组数据：
- * - 启用状态：哪些内置源被勾选；
- * - 自定义源：用户手动添加的 feed。
+ * 自定义源分类固定为 [FeedCategory.CUSTOM]。
  */
 class SubscriptionStore(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("subscriptions", Context.MODE_PRIVATE)
 
-    /** 读取启用状态；未记录过的内置源按 defaultEnabled 初始化。 */
     fun enabledIds(): Set<String> {
         val saved = prefs.getStringSet(KEY_ENABLED, null) ?: return FeedCatalog.builtin
             .filter { it.defaultEnabled }.map { it.id }.toSet()
@@ -30,7 +26,6 @@ class SubscriptionStore(context: Context) {
         prefs.edit().putStringSet(KEY_ENABLED, current).apply()
     }
 
-    /** 全部可用源 = 内置源 + 自定义源。 */
     fun allSources(): List<FeedSource> = FeedCatalog.builtin + customSources()
 
     fun customSources(): List<FeedSource> {
@@ -44,6 +39,7 @@ class SubscriptionStore(context: Context) {
                     title = o.getString("title"),
                     description = o.optString("description", ""),
                     url = o.getString("url"),
+                    category = o.optString("category", FeedCategory.CUSTOM),
                     seed = 100 + o.getInt("idHash"),
                 )
             }
@@ -52,7 +48,6 @@ class SubscriptionStore(context: Context) {
         }
     }
 
-    /** 添加自定义源；URL 冲突时更新标题。 */
     fun addCustom(title: String, url: String) {
         val normalized = if (url.startsWith("http")) url else "https://$url"
         val current = customSources().toMutableList()
@@ -62,7 +57,16 @@ class SubscriptionStore(context: Context) {
             current.add(existing.copy(title = title, description = existing.description))
         } else {
             val idHash = normalized.hashCode().and(0x7fffffff)
-            current.add(FeedSource(id = "custom_$idHash", title = title, description = "自定义订阅", url = normalized, seed = 100 + idHash))
+            current.add(
+                FeedSource(
+                    id = "custom_$idHash",
+                    title = title,
+                    description = "自定义订阅",
+                    url = normalized,
+                    category = FeedCategory.CUSTOM,
+                    seed = 100 + idHash,
+                )
+            )
         }
         prefs.edit().putString(KEY_CUSTOM, JSONArray(current.map { it.toJson() }).toString()).apply()
     }
@@ -77,6 +81,7 @@ class SubscriptionStore(context: Context) {
         put("title", title)
         put("description", description)
         put("url", url)
+        put("category", category)
         put("idHash", seed - 100)
     }
 

@@ -35,7 +35,7 @@ class Translator(private val store: TranslationStore) {
                         put("role", "system")
                         put(
                             "content",
-                            "你是一名专业翻译。把用户提供的内容准确翻译成${cfg.targetLang}。只输出译文本身，不要解释、不要引言、不要保留原文。代码与数字保留原样。",
+                            "你是一名专业翻译。把用户提供的内容准确翻译成${cfg.targetLang}。只输出译文本身，不要解释、不要引言、不要保留原文。代码、URL、数字与形如 @@C数字@@ 的标记必须原样保留。",
                         )
                     }
                 )
