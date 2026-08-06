@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 设置页源管理（二级页）+ AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.25**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.26**。
 
 ---
 
@@ -28,6 +28,11 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.26 更新日志
+
+1. **首页顶部清空**：移除顶部的搜索图标 / 搜索栏 / 只看未读筛选——顶部不再有任何按钮，
+   空间全部留给文章标题与内容；文章搜索功能整体移除（按需求删除）。
 
 ## 二、v1.25 更新日志
 
@@ -270,7 +275,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.25 / versionCode 26 |
+| 版本 | versionName 1.26 / versionCode 27 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
