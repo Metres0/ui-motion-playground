@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 设置页源管理（二级页）+ AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.27**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.28**。
 
 ---
 
@@ -29,7 +29,10 @@
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
 
-## 二、v1.27 更新日志
+## 二、v1.28 更新日志
+
+1. **沉浸式全屏**：隐藏系统状态栏，应用内容占满整个屏幕（下滑手势可临时唤出状态栏）；
+   状态栏隐藏后各页面原有状态栏 inset 归零，页面内容真正顶到屏幕最上沿。
 
 1. **根治顶部大片空白**：根因是「双重状态栏 padding」——AppNav 的 Scaffold 默认把内容
    往下推一个状态栏高度，各页面自己又加了 `windowInsetsPadding(statusBars)`，顶部空白 = 两份状态栏。
@@ -282,7 +285,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.27 / versionCode 28 |
+| 版本 | versionName 1.28 / versionCode 29 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
