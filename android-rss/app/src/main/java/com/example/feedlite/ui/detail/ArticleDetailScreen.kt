@@ -46,6 +46,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,6 +73,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.HtmlText
+import com.example.feedlite.data.ImageContext
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.Translator
@@ -100,6 +102,14 @@ fun SharedTransitionScope.ArticleDetailScreen(
 ) {
     val item = remember(itemKey) { ArticleCache.get(itemKey) }
     val context = LocalContext.current
+
+    // ★ 记录文章域名，供图片请求防盗链 Referer 使用（离开时清空）
+    DisposableEffect(item) {
+        ImageContext.articleRefererHost = item?.link?.let {
+            runCatching { java.net.URI(it).host }.getOrNull()
+        }
+        onDispose { ImageContext.articleRefererHost = null }
+    }
 
     var reading by remember { mutableStateOf(ReadingSettings(context).load()) }
     val readingStore = remember { ReadingSettings(context) }

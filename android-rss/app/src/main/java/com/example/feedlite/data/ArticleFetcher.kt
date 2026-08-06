@@ -19,7 +19,36 @@ class ArticleFetcher {
     /** 抓取并提取正文 HTML；失败抛 [RssFetchException]。 */
     suspend fun fetchArticle(link: String): String = withContext(Dispatchers.IO) {
         val html = fetch(link)
-        extractMainContent(html) ?: throw RssFetchException("未能在页面中找到正文区域")
+        val main = extractMainContent(html) ?: throw RssFetchException("未能在页面中找到正文区域")
+        normalizeImageUrls(main, link)
+    }
+
+    /**
+     * 补全正文中的相对图片 URL：
+     * - `//host/x.jpg` → `https://host/x.jpg`
+     * - `/path/x.jpg`  → `https://{link 域名}/path/x.jpg`
+     * - `../x.jpg`     → 基于 link 路径解析
+     */
+    private fun normalizeImageUrls(html: String, link: String): String {
+        val base = runCatching { java.net.URI(link) }.getOrNull() ?: return html
+        val scheme = base.scheme ?: "https"
+        val host = base.host
+        if (host.isNullOrBlank()) return html
+        return html.replace(
+            Regex("""(<img\b[^>]*\ssrc=["'])([^"']+)(["'])""", RegexOption.IGNORE_CASE)
+        ) { m ->
+            val url = m.groupValues[2].trim()
+            val resolved = when {
+                url.startsWith("http://") || url.startsWith("https://") -> url
+                url.startsWith("//") -> "$scheme:$url"
+                url.startsWith("/") -> "$scheme://$host$url"
+                else -> {
+                    val dir = base.path.substringBeforeLast('/')
+                    "$scheme://$host$dir/$url"
+                }
+            }
+            m.groupValues[1] + resolved + m.groupValues[3]
+        }
     }
 
     private fun fetch(urlString: String): String {

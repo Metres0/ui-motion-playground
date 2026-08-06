@@ -32,7 +32,7 @@ object HtmlBlocks {
     )
 
     private val OPEN_BLOCK =
-        Regex("""(?is)<(h[1-6]|pre|ul|ol|blockquote|img|hr|p)\b[^>]*>""")
+        Regex("""(?is)<(h[1-6]|pre|ul|ol|blockquote|img|hr|p|div|section|article|figure)\b[^>]*>""")
 
     /** 解析 HTML 为块序列。段落内嵌图片会拆出独立 Image 块。 */
     fun parse(html: String): List<Block> {
@@ -106,6 +106,12 @@ object HtmlBlocks {
                     pos = if (endIdx >= 0) endIdx + "</blockquote>".length else html.length
                 }
 
+                // 容器标签：仅作段落分隔边界（不吞内容），让正文分段更合理
+                "div", "section", "article", "figure" -> {
+                    flush()
+                    pos = tagStart
+                }
+
                 "p" -> {
                     // 段落：一次性消费到 </p>，段内图片拆出 Image 块
                     flush()
@@ -145,8 +151,10 @@ object HtmlBlocks {
 
     /** 行内样式解析：strong/b、em/i、code、a、br、文本。img 已在块级处理，此处忽略。 */
     fun inline(html: String): List<Span> {
+        // 关键修复：未知标签（Vue 的 data-v-xxx div 等）与 <!-- --> 注释必须被消费丢弃，
+        // 否则 [^<]+ 会误把标签属性文本当正文输出（少数派全文脏文本的根因）。
         val pattern = Regex(
-            """(?is)(<a\b[^>]*>.*?</a>|<strong>.*?</strong>|<b>.*?</b>|<em>.*?</em>|<i>.*?</i>|<code>.*?</code>|<br\s*/?>|<img\b[^>]*>|[^<]+)"""
+            """(?is)(<a\b[^>]*>.*?</a>|<strong>.*?</strong>|<b>.*?</b>|<em>.*?</em>|<i>.*?</i>|<code>.*?</code>|<br\s*/?>|<img\b[^>]*>|<!-{2}.*?-{2}>|<[a-zA-Z/][^>]*>|[^<]+)"""
         )
         val spans = ArrayList<Span>()
 
