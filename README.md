@@ -1,8 +1,9 @@
 # UI Playground — 安卓 + Web 通用动效对照工程
 
-> ## 📱 FeedLite「轻阅 RSS」已交付（Android 16 / v1.0）
-> 本研究的**落地应用**：内置 8 个订阅源、先加载 5 篇 + 点击加载更多、
-> 共享元素转场 / stagger / 渐进式图片，release 签名 APK 已构建。
+> ## 📱 FeedLite「轻阅 RSS」已交付（Android 16 / v1.1）
+> 本研究的**落地应用**：首页聚合流 + 侧边栏源管理 + AI 翻译、
+> 内置 8 个订阅源、先加载 5 篇 + 点击加载更多、共享元素转场 / stagger / 渐进式图片。
+> release 签名 APK：**[FeedLite-v1.1.apk](https://github.com/Metres0/ui-motion-playground/releases/latest)**。
 > 详见 **[`android-rss/README.md`](android-rss/README.md)**。
 
 一套演示「加载策略 + 页面切换效果 + 优先加载」的**双端对照 demo**。
