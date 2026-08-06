@@ -81,7 +81,6 @@ fun SettingsScreen(
     themeSettings: ThemeSettings,
     subscriptionStore: SubscriptionStore,
     readingState: ReadingStateStore,
-    onOpenSources: () -> Unit, // ★ v1.24：进入订阅源管理二级页
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -148,37 +147,7 @@ fun SettingsScreen(
     ) {
         Column(Modifier.padding(16.dp)) {
 
-            // ════════ 订阅源（二级页入口） ════════
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onOpenSources)
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "订阅源管理",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    "共 ${subscriptionStore.allSources().size} 个",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.outline,
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "进入", tint = MaterialTheme.colorScheme.outline)
-            }
-            Text(
-                "搜索 / 开关 / 添加 / 删除订阅源，公众号微博转源帮助",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
-
-            // ════════ 外观 ════════
+            // ★ v1.30：订阅源管理已独立为底部 Tab「源」，设置页不再保留入口
             Text("外观", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
             Text("主题", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)

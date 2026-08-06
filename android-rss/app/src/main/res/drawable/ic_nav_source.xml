@@ -1,0 +1,34 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- iOS 细线风格：源列表（三条横线 + 左侧圆点） -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M5.5,7.5 a1.6,1.6 0 1,1 0.01,0 z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M5.5,12.0 a1.6,1.6 0 1,1 0.01,0 z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M5.5,16.5 a1.6,1.6 0 1,1 0.01,0 z" />
+    <path
+        android:pathData="M8.5,7.5 H18.5"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M8.5,12.0 H15.5"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M8.5,16.5 H17.5"
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.7"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>

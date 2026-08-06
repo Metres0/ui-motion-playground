@@ -52,7 +52,7 @@ import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.SubscriptionStore
 
 /**
- * 订阅源管理（v1.24）——设置页的二级子页。
+ * 订阅源管理（v1.30）——底部导航 Tab 页。
  * 搜索 / 分类分组 / 每源开关·进入·删除 / 添加 / 公众号微博转源帮助。
  */
 @Composable
@@ -60,7 +60,8 @@ fun SourceManageScreen(
     store: SubscriptionStore,
     onOpenSource: (FeedSource) -> Unit,
     onSubscriptionChanged: () -> Unit,
-    onBack: () -> Unit,
+    asTab: Boolean = false,
+    onBack: () -> Unit = {},
 ) {
     var sources by remember { mutableStateOf(store.allSources()) }
     var enabled by remember { mutableStateOf(store.enabledIds()) }
@@ -73,19 +74,25 @@ fun SourceManageScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        // 浮动返回行 + 小标题
+        // 顶部：tab 模式仅显示小标题；二级页模式显示返回 + 标题
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .windowInsetsPadding(WindowInsets.displayCutout)
                 .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 2.dp),
+                .padding(horizontal = 2.dp, vertical = if (asTab) 10.dp else 2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(24.dp))
+            if (!asTab) {
+                IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(24.dp))
+                }
             }
-            Text("订阅源管理", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "订阅源",
+                style = if (asTab) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
+                modifier = Modifier.padding(start = if (asTab) 16.dp else 0.dp),
+            )
         }
 
         Column(

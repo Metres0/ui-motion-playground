@@ -97,6 +97,7 @@ fun AppNav(
                         Triple("home", R.drawable.ic_nav_home, "首页"),
                         Triple("starred", R.drawable.ic_nav_star, "收藏"),
                         Triple("later", R.drawable.ic_nav_bookmark, "稍后再看"),
+                        Triple("sources", R.drawable.ic_nav_source, "源"),
                         Triple("settings", R.drawable.ic_nav_settings, "设置"),
                     )
                     items.forEach { (route, iconRes, label) ->
@@ -232,11 +233,10 @@ fun AppNav(
                     themeSettings = themeSettings,
                     subscriptionStore = store,
                     readingState = readingState,
-                    onOpenSources = { nav.navigate("sources") },
                     onBack = { nav.popBackStack() },
                 )
             }
-            // ★ v1.24：订阅源管理二级页
+            // ★ v1.30：源管理升级为底部导航 Tab（asTab 模式无返回行）
             composable(
                 route = "sources",
                 enterTransition = {
@@ -254,11 +254,11 @@ fun AppNav(
             ) {
                 SourceManageScreen(
                     store = store,
+                    asTab = true,
                     onOpenSource = { source: FeedSource ->
                         nav.navigate("articles/${Uri.encode(source.id)}")
                     },
                     onSubscriptionChanged = { homeRefreshTick++ },
-                    onBack = { nav.popBackStack() },
                 )
             }
             composable(

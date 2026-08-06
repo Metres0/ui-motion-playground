@@ -34,12 +34,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -54,7 +51,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -188,7 +184,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
 
     Scaffold(
         topBar = {
-            // ★ v1.29：自定义沉浸式顶栏——适配挖孔/圆角，图标统一 40dp/22dp 不再挤压变形
+            // ★ v1.30：阅读软件式沉浸顶栏——只留 返回 + 收藏 + 稍后再看，阅读中不需要设置类操作
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -201,9 +197,6 @@ fun SharedTransitionScope.ArticleDetailScreen(
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = { showReadingPanel = true }, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.FormatSize, contentDescription = "阅读设置", modifier = Modifier.size(22.dp))
-                }
                 // ★ 收藏
                 IconButton(onClick = { toggleStar() }, modifier = Modifier.size(40.dp)) {
                     Icon(
@@ -221,35 +214,6 @@ fun SharedTransitionScope.ArticleDetailScreen(
                         tint = if (later) MaterialTheme.colorScheme.primary else Color.Unspecified,
                         modifier = Modifier.size(22.dp),
                     )
-                }
-                // ★ v1.25：分享文章
-                if (item != null) {
-                    IconButton(
-                        onClick = {
-                            val share = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_SUBJECT, item.title)
-                                putExtra(Intent.EXTRA_TEXT, "${item.title}\n${item.link}")
-                            }
-                            context.startActivity(Intent.createChooser(share, "分享文章"))
-                        },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(Icons.Default.Share, contentDescription = "分享", modifier = Modifier.size(22.dp))
-                    }
-                }
-                IconButton(onClick = { viewModel.translate() }, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Default.Translate, contentDescription = "翻译全文", modifier = Modifier.size(22.dp))
-                }
-                if (item != null && item.link.isNotBlank()) {
-                    IconButton(
-                        onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.link)))
-                        },
-                        modifier = Modifier.size(40.dp),
-                    ) {
-                        Icon(Icons.Default.OpenInNew, contentDescription = "在浏览器打开", modifier = Modifier.size(22.dp))
-                    }
                 }
             }
         },

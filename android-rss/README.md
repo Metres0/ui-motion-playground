@@ -1,8 +1,8 @@
 # FeedLite「轻阅 RSS」— 基于 Android 16 的 RSS 阅读器
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
-首页聚合流（分类分段）+ 设置页源管理（二级页）+ AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.29**。
+首页聚合流（分类分段）+ 源管理独立 Tab + AI 翻译 + 富文本排版；全程 Compose 动效
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.30**。
 
 ---
 
@@ -28,6 +28,13 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.30 更新日志
+
+1. **源管理升级为底部导航 Tab**：底部导航变为 首页 / 收藏 / 稍后再看 / **源** / 设置 五个 Tab，
+   「源」页（搜索 / 分类 / 开关 / 添加删除 / 转源帮助）独立展示，设置页移除源入口；
+2. **详情页改阅读软件式顶栏**：只保留 **返回 + 收藏 + 稍后再看** 三个操作，去掉阅读设置 /
+   翻译 / 分享 / 浏览器打开等设置类图标——沉浸阅读，不被工具条干扰（相关功能仍在设置页）。
 
 ## 二、v1.29 更新日志
 
@@ -292,7 +299,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.29 / versionCode 30 |
+| 版本 | versionName 1.30 / versionCode 31 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
