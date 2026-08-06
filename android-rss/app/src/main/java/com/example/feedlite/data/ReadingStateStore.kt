@@ -9,14 +9,19 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 阅读状态持久化（v1.8）：已读标记 + 收藏 + 变更版本号（供 UI 刷新）。
+ * 阅读状态持久化（v1.9）：已读 / 收藏 / 稍后再看 / 阅读进度。
+ *
+ * ⚠️ 关键修复：收藏与稍后再看的持久化必须把每个 RssItem 先 toJson() 成 JSONObject 再放入
+ * JSONObject —— 直接 `JSONObject(Map<String,RssItem>)` 会把 RssItem 序列化成字符串（toString），
+ * 读回时 getJSONObject 抛异常导致「收藏永远显示不出来」。同时换用新 prefs 文件
+ * reading_state_v2 丢弃旧版本损坏数据。
  */
 class ReadingStateStore(context: Context) {
 
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("reading_state", Context.MODE_PRIVATE)
+        context.getSharedPreferences("reading_state_v2", Context.MODE_PRIVATE)
 
-    /** 收藏/已读变更时自增；首页、列表、收藏页 collect 它来刷新。 */
+    /** 收藏/已读/稍后再看 变更时自增；列表页 collect 它来刷新。 */
     private val _version = MutableStateFlow(0)
     val version: StateFlow<Int> = _version.asStateFlow()
 
@@ -35,42 +40,83 @@ class ReadingStateStore(context: Context) {
     }
 
     // ── 收藏 ────────────────────────────────
-    fun isStarred(key: String): Boolean = starredMap().containsKey(key)
+    fun isStarred(key: String): Boolean = itemMap(KEY_STARRED).containsKey(key)
 
     fun toggleStar(item: RssItem): Boolean {
-        val map = starredMap().toMutableMap()
+        val map = itemMap(KEY_STARRED).toMutableMap()
         val starred = if (map.containsKey(item.key)) {
             map.remove(item.key); false
         } else {
             map[item.key] = item; true
         }
-        prefs.edit().putString(KEY_STARRED, JSONObject(map).toString()).apply()
-        bump() // ★ 通知收藏页/首页刷新
+        saveItemMap(KEY_STARRED, map)
+        bump()
         return starred
     }
 
-    fun starredItems(): List<RssItem> {
-        val map = starredMap()
-        return map.keys.mapNotNull { map[it] }
-    }
+    fun starredItems(): List<RssItem> = itemMap(KEY_STARRED).values.toList()
 
-    /** ★ 导出收藏为 JSON 文本。 */
+    /** 导出收藏为 JSON 文本。 */
     fun exportJson(): String {
-        val items = starredItems()
         val arr = JSONArray()
-        items.forEach { it.toJson().also { arr.put(it) } }
+        itemMap(KEY_STARRED).values.forEach { arr.put(it.toJson()) }
         return arr.toString(2)
     }
 
-    private fun starredMap(): Map<String, RssItem> {
-        val raw = prefs.getString(KEY_STARRED, null) ?: return emptyMap()
+    // ── 稍后再看 ────────────────────────────
+    fun isReadLater(key: String): Boolean = itemMap(KEY_LATER).containsKey(key)
+
+    fun toggleReadLater(item: RssItem): Boolean {
+        val map = itemMap(KEY_LATER).toMutableMap()
+        val later = if (map.containsKey(item.key)) {
+            map.remove(item.key); false
+        } else {
+            map[item.key] = item; true
+        }
+        saveItemMap(KEY_LATER, map)
+        bump()
+        return later
+    }
+
+    fun readLaterItems(): List<RssItem> = itemMap(KEY_LATER).values.toList()
+
+    // ── 阅读进度（滚动位置 px） ─────────────
+    fun saveProgress(key: String, offsetPx: Float) {
+        if (offsetPx < 10f) return // 顶部附近不记录
+        val cur = progressMap()
+        if (cur[key] == offsetPx) return
+        cur[key] = offsetPx
+        prefs.edit().putString(KEY_PROGRESS, JSONObject(cur.mapValues { it.value.toString() }).toString()).apply()
+    }
+
+    fun getProgress(key: String): Float = progressMap()[key] ?: 0f
+
+    // ── 内部：通用 item 存储 ─────────────────
+    private fun itemMap(prefKey: String): Map<String, RssItem> {
+        val raw = prefs.getString(prefKey, null) ?: return emptyMap()
         return try {
             val obj = JSONObject(raw)
-            obj.keys().asSequence().associate { k ->
-                k to rssItemFromJson(obj.getJSONObject(k))
-            }
+            obj.keys().asSequence().associate { k -> k to rssItemFromJson(obj.getJSONObject(k)) }
         } catch (e: Exception) {
             emptyMap()
+        }
+    }
+
+    private fun saveItemMap(prefKey: String, map: Map<String, RssItem>) {
+        val obj = JSONObject()
+        map.forEach { (k, v) -> obj.put(k, v.toJson()) }
+        prefs.edit().putString(prefKey, obj.toString()).apply()
+    }
+
+    private fun progressMap(): MutableMap<String, Float> {
+        val raw = prefs.getString(KEY_PROGRESS, null) ?: return mutableMapOf()
+        return try {
+            val obj = JSONObject(raw)
+            obj.keys().asSequence().associateTo(linkedMapOf()) { k ->
+                k to (obj.optString(k).toFloatOrNull() ?: 0f)
+            }
+        } catch (e: Exception) {
+            mutableMapOf()
         }
     }
 
@@ -99,5 +145,7 @@ class ReadingStateStore(context: Context) {
     private companion object {
         const val KEY_READ = "read_keys"
         const val KEY_STARRED = "starred_items"
+        const val KEY_LATER = "later_items"
+        const val KEY_PROGRESS = "progress_px"
     }
 }

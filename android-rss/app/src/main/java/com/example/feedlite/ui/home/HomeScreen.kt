@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HelpOutline
@@ -104,6 +105,7 @@ fun SharedTransitionScope.HomeScreen(
     onOpenArticle: (RssItem) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenStarred: () -> Unit,
+    onOpenLater: () -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(
         factory = viewModelFactory {
@@ -146,6 +148,10 @@ fun SharedTransitionScope.HomeScreen(
                     onOpenStarred = {
                         closeDrawer()
                         onOpenStarred()
+                    },
+                    onOpenLater = {
+                        closeDrawer()
+                        onOpenLater()
                     },
                     onAbout = { showAbout = true },
                     onConvertHelp = { showConvertHelp = true },
@@ -298,19 +304,22 @@ private fun SharedTransitionScope.HomeArticleCard(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ProgressiveImage(
-            url = entry.item.imageUrl,
-            seed = entry.item.key.hashCode(),
-            contentDescription = null,
-            modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .sharedElement(
-                    state = rememberSharedContentState(key = "thumb_${entry.item.key}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                ),
-        )
-        Spacer(Modifier.width(12.dp))
+        // ★ 无缩略图不显示色块，直接放标题
+        if (entry.item.imageUrl != null) {
+            ProgressiveImage(
+                url = entry.item.imageUrl,
+                seed = entry.item.key.hashCode(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .sharedElement(
+                        state = rememberSharedContentState(key = "thumb_${entry.item.key}"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    ),
+            )
+            Spacer(Modifier.width(12.dp))
+        }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -367,6 +376,7 @@ private fun DrawerContent(
     onDelete: (String) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenStarred: () -> Unit,
+    onOpenLater: () -> Unit,
     onAbout: () -> Unit,
     onConvertHelp: () -> Unit,
 ) {
@@ -431,6 +441,14 @@ private fun DrawerContent(
             icon = { Icon(Icons.Default.Star, contentDescription = null) },
             selected = false,
             onClick = onOpenStarred,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
+        // ★ 稍后再看
+        NavigationDrawerItem(
+            label = { Text("稍后再看") },
+            icon = { Icon(Icons.Default.Bookmarks, contentDescription = null) },
+            selected = false,
+            onClick = onOpenLater,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(

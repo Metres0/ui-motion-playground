@@ -1,4 +1,4 @@
-package com.example.feedlite.ui.starred
+package com.example.feedlite.ui.later
 
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -20,13 +20,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -45,7 +43,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -58,53 +55,29 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
- * 收藏列表页（v1.8）：
- * - 版本号驱动刷新：返回本页 / 其他页取消收藏时列表自动更新；
- * - 顶栏「导出」：把收藏导出为 JSON 文件（SAF）。
+ * 稍后再看列表页（v1.9）：挂起的文章，点击进入详情，可移除。
+ * 版本号流驱动刷新。
  */
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun SharedTransitionScope.StarredScreen(
+fun SharedTransitionScope.ReadLaterScreen(
     readingState: ReadingStateStore,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
     onOpenArticle: (RssItem) -> Unit,
 ) {
-    val context = LocalContext.current
     val version by readingState.version.collectAsState()
-    var items by remember { mutableStateOf(readingState.starredItems()) }
+    var items by remember { mutableStateOf(readingState.readLaterItems()) }
 
-    // ★ 收藏变更时刷新列表
-    LaunchedEffect(version) { items = readingState.starredItems() }
-
-    // ★ 导出为 JSON 文件
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        if (uri != null) {
-            try {
-                context.contentResolver.openOutputStream(uri)?.use {
-                    it.write(readingState.exportJson().toByteArray(Charsets.UTF_8))
-                }
-                android.widget.Toast.makeText(context, "收藏已导出", android.widget.Toast.LENGTH_SHORT).show()
-            } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "导出失败：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
+    LaunchedEffect(version) { items = readingState.readLaterItems() }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("我的收藏") },
+                title = { Text("稍后再看") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { exportLauncher.launch("feedlite_favorites.json") }) {
-                        Icon(Icons.Default.Share, contentDescription = "导出收藏")
                     }
                 },
             )
@@ -113,9 +86,9 @@ fun SharedTransitionScope.StarredScreen(
         if (items.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
+                    Icon(Icons.Default.Bookmarks, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
                     Spacer(Modifier.height(12.dp))
-                    Text("还没有收藏的文章\n在文章详情页点右上角星标即可收藏", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("没有挂起的文章\n在文章详情页点「书签」图标加入稍后再看", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -148,7 +121,7 @@ fun SharedTransitionScope.StarredScreen(
                             .padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        // ★ 无缩略图不显示色块，直接放标题
+                        // 有图才显示缩略图，无图直接标题（不要色块）
                         if (item.imageUrl != null) {
                             ProgressiveImage(
                                 url = item.imageUrl,
@@ -156,7 +129,7 @@ fun SharedTransitionScope.StarredScreen(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(64.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .clip(RoundedCornerShape(10.dp))
                                     .sharedElement(
                                         state = rememberSharedContentState(key = "thumb_${item.key}"),
                                         animatedVisibilityScope = animatedVisibilityScope,
@@ -165,13 +138,30 @@ fun SharedTransitionScope.StarredScreen(
                             Spacer(Modifier.width(12.dp))
                         }
                         Column(Modifier.weight(1f)) {
-                            Text(item.title, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(
+                                item.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                             Spacer(Modifier.height(4.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-                                Spacer(Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text(
+                                        text = item.author.takeIf { it.isNotBlank() }?.take(1) ?: "阅",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                    )
+                                }
+                                Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = item.author.takeIf { it.isNotBlank() } ?: "已收藏",
+                                    text = "挂起 · 点击阅读",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,

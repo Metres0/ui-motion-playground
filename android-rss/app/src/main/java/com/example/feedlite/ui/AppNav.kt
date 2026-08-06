@@ -23,6 +23,7 @@ import com.example.feedlite.data.ThemeSettings
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.UpdateSettings
+import com.example.feedlite.ui.later.ReadLaterScreen
 import com.example.feedlite.ui.starred.StarredScreen
 import com.example.feedlite.ui.articles.ArticleListScreen
 import com.example.feedlite.ui.detail.ArticleDetailScreen
@@ -79,6 +80,7 @@ fun AppNav(
                     },
                     onOpenSettings = { nav.navigate("settings") },
                     onOpenStarred = { nav.navigate("starred") },
+                    onOpenLater = { nav.navigate("later") },
                 )
             }
             composable(
@@ -181,6 +183,32 @@ fun AppNav(
             ) {
                 val scope = this
                 StarredScreen(
+                    readingState = readingState,
+                    animatedVisibilityScope = scope,
+                    onBack = { nav.popBackStack() },
+                    onOpenArticle = { item ->
+                        ArticleCache.put(item.key, item)
+                        nav.navigate("article/${Uri.encode(item.key)}")
+                    },
+                )
+            }
+            composable(
+                route = "later",
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeIn(MotionTokens.pageEnter())
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeOut(MotionTokens.pageExit())
+                },
+            ) {
+                val scope = this
+                ReadLaterScreen(
                     readingState = readingState,
                     animatedVisibilityScope = scope,
                     onBack = { nav.popBackStack() },

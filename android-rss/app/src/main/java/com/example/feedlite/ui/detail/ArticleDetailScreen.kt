@@ -27,6 +27,8 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.OpenInNew
@@ -52,6 +54,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -129,6 +132,31 @@ fun SharedTransitionScope.ArticleDetailScreen(
         starred = readingState.toggleStar(it)
     }
 
+    // ★ 稍后再看（书签）
+    var later by remember(itemKey) { mutableStateOf(item?.let { readingState.isReadLater(it.key) } ?: false) }
+    fun toggleLater() {
+        val it = item ?: return
+        later = readingState.toggleReadLater(it)
+    }
+
+    // ★ 阅读进度记忆：进入恢复滚动位置，离开保存
+    val scrollState = rememberScrollState()
+    LaunchedEffect(itemKey) {
+        val saved = readingState.getProgress(itemKey)
+        if (saved > 0f) {
+            var attempts = 0
+            while (attempts < 20) {
+                scrollState.scrollTo(saved.toInt())
+                if (scrollState.value >= saved.toInt()) break
+                kotlinx.coroutines.delay(50)
+                attempts++
+            }
+        }
+    }
+    DisposableEffect(itemKey) {
+        onDispose { readingState.saveProgress(itemKey, scrollState.value.toFloat()) }
+    }
+
     var reading by remember { mutableStateOf(ReadingSettings(context).load()) }
     val readingStore = remember { ReadingSettings(context) }
     var showReadingPanel by remember { mutableStateOf(false) }
@@ -174,6 +202,14 @@ fun SharedTransitionScope.ArticleDetailScreen(
                             tint = if (starred) MaterialTheme.colorScheme.primary else Color.Unspecified,
                         )
                     }
+                    // ★ 稍后再看（书签）
+                    IconButton(onClick = { toggleLater() }) {
+                        Icon(
+                            if (later) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                            contentDescription = if (later) "移出稍后再看" else "稍后再看",
+                            tint = if (later) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        )
+                    }
                     IconButton(onClick = { viewModel.translate() }) {
                         Icon(Icons.Default.Translate, contentDescription = "翻译全文")
                     }
@@ -213,9 +249,11 @@ fun SharedTransitionScope.ArticleDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState), // ★ 阅读进度记忆
         ) {
-            ProgressiveImage(
+            // ★ 无封面图不显示色块，直接进入标题
+            if (item.imageUrl != null) {
+                ProgressiveImage(
                 url = item.imageUrl,
                 seed = item.key.hashCode(),
                 contentDescription = item.title,
@@ -228,6 +266,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                         animatedVisibilityScope = animatedVisibilityScope,
                     ),
             )
+            }
             Column(Modifier.padding(horizontal = 16.dp)) {
                 Spacer(Modifier.height(16.dp))
                 Text(item.title, style = MaterialTheme.typography.headlineSmall)

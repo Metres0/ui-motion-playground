@@ -201,19 +201,22 @@ fun SharedTransitionScope.ArticleCard(
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ProgressiveImage(
-            url = item.imageUrl,
-            seed = item.key.hashCode(),
-            contentDescription = null,
-            modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .sharedElement(
-                    state = rememberSharedContentState(key = "thumb_${item.key}"),
-                    animatedVisibilityScope = animatedVisibilityScope,
-                ),
-        )
-        Spacer(Modifier.width(12.dp))
+        // ★ 无缩略图不显示色块，直接放标题
+        if (item.imageUrl != null) {
+            ProgressiveImage(
+                url = item.imageUrl,
+                seed = item.key.hashCode(),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .sharedElement(
+                        state = rememberSharedContentState(key = "thumb_${item.key}"),
+                        animatedVisibilityScope = animatedVisibilityScope,
+                    ),
+            )
+            Spacer(Modifier.width(12.dp))
+        }
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!isRead) {
