@@ -17,40 +17,56 @@ import com.example.feedlite.MotionTokens
 import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.Translator
+import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.ui.articles.ArticleListScreen
 import com.example.feedlite.ui.detail.ArticleDetailScreen
-import com.example.feedlite.ui.feeds.FeedListScreen
+import com.example.feedlite.ui.home.HomeScreen
+import com.example.feedlite.ui.settings.SettingsScreen
 
 /**
- * 导航编排：三个页面 + 统一转场 token（进 350ms / 出 90ms，emphasized，返回镜像）。
+ * 导航编排（v1.1）：
  *
- * 路由：
- * - feeds                    订阅管理
- * - articles/{sourceId}      文章列表（先 5 篇 + 加载更多）
- * - article/{itemKey}        文章详情（itemKey 经 Uri.encode 安全传递）
+ * - home                首页聚合流 + 侧边栏（源管理/设置/关于）
+ * - articles/{sourceId} 单源文章列表（先 5 篇 + 加载更多）
+ * - article/{itemKey}   文章详情（共享元素 + 翻译）
+ * - settings            设置（翻译 API Key）
+ *
+ * 统一转场 token：进 350ms / 出 90ms，emphasized，返回镜像。
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun AppNav(store: SubscriptionStore, repository: RssRepository) {
+fun AppNav(
+    store: SubscriptionStore,
+    repository: RssRepository,
+    translator: Translator,
+    translationStore: TranslationStore,
+) {
     val nav = rememberNavController()
 
     SharedTransitionLayout {
         NavHost(
             navController = nav,
-            startDestination = "feeds",
+            startDestination = "home",
             enterTransition = { fadeIn(MotionTokens.pageEnter()) },
             exitTransition = { fadeOut(MotionTokens.pageExit()) },
             popEnterTransition = { fadeIn(MotionTokens.pageEnter()) },
             popExitTransition = { fadeOut(MotionTokens.pageExit()) },
         ) {
-            composable("feeds") {
+            composable("home") {
                 val scope = this
-                FeedListScreen(
+                HomeScreen(
+                    repository = repository,
                     store = store,
                     animatedVisibilityScope = scope,
                     onOpenSource = { source: FeedSource ->
                         nav.navigate("articles/${Uri.encode(source.id)}")
                     },
+                    onOpenArticle = { item ->
+                        ArticleCache.put(item.key, item)
+                        nav.navigate("article/${Uri.encode(item.key)}")
+                    },
+                    onOpenSettings = { nav.navigate("settings") },
                 )
             }
             composable(
@@ -103,7 +119,29 @@ fun AppNav(store: SubscriptionStore, repository: RssRepository) {
                 val scope = this
                 ArticleDetailScreen(
                     itemKey = itemKey,
+                    translator = translator,
+                    store = translationStore,
                     animatedVisibilityScope = scope,
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            composable(
+                route = "settings",
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeIn(MotionTokens.pageEnter())
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeOut(MotionTokens.pageExit())
+                },
+            ) {
+                SettingsScreen(
+                    store = translationStore,
                     onBack = { nav.popBackStack() },
                 )
             }

@@ -45,7 +45,8 @@ class ArticleListViewModel(
             _state.value = ArticleListUiState.Loading
             try {
                 val feed = repository.fetchFeed(s)
-                _state.value = ArticleListUiState.Success(feed, visibleCount = 5)
+                // ★ 修复闪退：文章数不足 5 时按实际数量展示，防止 items[index] 越界
+                _state.value = ArticleListUiState.Success(feed, visibleCount = minOf(5, feed.items.size))
             } catch (e: Exception) {
                 _state.value = ArticleListUiState.Error(e.message ?: "加载失败，请检查网络")
             }
