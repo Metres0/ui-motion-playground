@@ -20,9 +20,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -54,7 +51,6 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -184,34 +180,34 @@ fun SharedTransitionScope.HomeScreen(
             }
         },
     ) {
-        Scaffold(
-            topBar = {
-                // ★ 极简顶栏：再缩小一半——图标 16dp、按钮 28dp、无 padding
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.statusBars),
-                    verticalAlignment = Alignment.CenterVertically,
+        // ★ 顶栏空间压到最小：浮动图标行 + 内容紧贴（AppNav 的 Scaffold 已处理状态栏 inset）
+        Box(Modifier.fillMaxSize()) {
+            // 浮动图标：仅一行、14dp 图标，几乎不占高度
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopStart)
+                    .padding(horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = { coroutineScope.launch { drawerState.open() } },
+                    modifier = Modifier.size(22.dp),
                 ) {
-                    IconButton(
-                        onClick = { coroutineScope.launch { drawerState.open() } },
-                        modifier = Modifier.size(28.dp),
-                    ) {
-                        Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(16.dp))
-                    }
-                    Spacer(Modifier.weight(1f))
-                    IconButton(
-                        onClick = viewModel::refresh,
-                        modifier = Modifier.size(28.dp),
-                    ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(16.dp))
-                    }
+                    Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(14.dp))
                 }
-            },
-        ) { padding ->
+                Spacer(Modifier.weight(1f))
+                IconButton(
+                    onClick = viewModel::refresh,
+                    modifier = Modifier.size(22.dp),
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(14.dp))
+                }
+            }
+
             when (val s = state) {
                 HomeUiState.Loading -> Column(
-                    Modifier.fillMaxSize().padding(padding),
+                    Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -223,7 +219,7 @@ fun SharedTransitionScope.HomeScreen(
                 is HomeUiState.Success -> {
                     if (s.entries.isEmpty()) {
                         Column(
-                            Modifier.fillMaxSize().padding(padding).padding(32.dp),
+                            Modifier.fillMaxSize().padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
@@ -250,15 +246,16 @@ fun SharedTransitionScope.HomeScreen(
                         }
                         LazyColumn(
                             state = listState,
-                            modifier = Modifier.fillMaxSize().padding(padding),
-                            contentPadding = PaddingValues(16.dp),
+                            modifier = Modifier.fillMaxSize(),
+                            // ★ 顶部只留图标行高度，内容紧贴
+                            contentPadding = PaddingValues(top = 26.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
                             groups.forEach { (cat, list) ->
                                 item(key = "header_$cat") {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(top = 10.dp, bottom = 4.dp),
+                                            .padding(top = 0.dp, bottom = 2.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
