@@ -186,26 +186,25 @@ fun SharedTransitionScope.HomeScreen(
     ) {
         Scaffold(
             topBar = {
-                // ★ 极简顶栏：无标题无 logo，仅两个小图标（约原 1/3 视觉占比）
+                // ★ 极简顶栏：再缩小一半——图标 16dp、按钮 28dp、无 padding
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .windowInsetsPadding(WindowInsets.statusBars)
-                        .padding(horizontal = 2.dp),
+                        .windowInsetsPadding(WindowInsets.statusBars),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(
                         onClick = { coroutineScope.launch { drawerState.open() } },
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(28.dp),
                     ) {
-                        Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(22.dp))
+                        Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(16.dp))
                     }
                     Spacer(Modifier.weight(1f))
                     IconButton(
                         onClick = viewModel::refresh,
-                        modifier = Modifier.size(40.dp),
+                        modifier = Modifier.size(28.dp),
                     ) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(22.dp))
+                        Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(16.dp))
                     }
                 }
             },
@@ -489,7 +488,7 @@ private fun DrawerContent(
         )
         NavigationDrawerItem(
             label = { Text("公众号 / 微博转源帮助") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = Color.Unspecified) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             selected = false,
             onClick = onConvertHelp,
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -500,7 +499,7 @@ private fun DrawerContent(
         // ★ 我的收藏
         NavigationDrawerItem(
             label = { Text("我的收藏") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = Color.Unspecified) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             selected = false,
             onClick = onOpenStarred,
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -508,21 +507,21 @@ private fun DrawerContent(
         // ★ 稍后再看
         NavigationDrawerItem(
             label = { Text("稍后再看") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = Color.Unspecified) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             selected = false,
             onClick = onOpenLater,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(
             label = { Text("设置") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = Color.Unspecified) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             selected = false,
             onClick = onOpenSettings,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(
             label = { Text("关于") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = Color.Unspecified) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
             selected = false,
             onClick = onAbout,
             modifier = Modifier.padding(horizontal = 12.dp),

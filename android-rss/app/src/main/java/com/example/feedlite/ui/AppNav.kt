@@ -9,6 +9,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -102,10 +104,11 @@ fun AppNav(
                                 }
                             },
                             icon = {
+                                // ★ iOS 透明图标：靠 tint 着色，选中=品牌色，未选中=默认灰
                                 Icon(
                                     painterResource(iconRes),
                                     contentDescription = label,
-                                    tint = if (selected) Color.Unspecified else Color.Unspecified,
+                                    tint = if (selected) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 )
                             },
                             label = { Text(label) },

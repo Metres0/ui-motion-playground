@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.16**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.17**。
 
 ---
 
@@ -28,6 +28,14 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.17 更新日志
+
+1. **顶栏再缩小一半**：菜单 / 刷新图标 22dp → **16dp**，按钮 40dp → **28dp**，
+   去掉横向留白——顶部几乎只占一行图标位，文章标题显示空间最大化；
+2. **iOS 透明风格图标**：首页 / 收藏 / 稍后再看 / 设置 / 帮助 全部改为**苹果 SF Symbols 风格**
+   ——透明背景 + 1.6~1.7dp 细线条 + 圆头描边，靠 tint 着色（选中品牌蓝、未选中灰，深色模式自适应）；
+3. **App 图标同步 iOS 细线风**：前景主体改为**白色细线描边的 RSS 信号**（7dp 圆头弧线）+ 右下细线书签角标。
 
 ## 二、v1.16 更新日志
 
@@ -195,7 +203,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.16 / versionCode 17 |
+| 版本 | versionName 1.17 / versionCode 18 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
