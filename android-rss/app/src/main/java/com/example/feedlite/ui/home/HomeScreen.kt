@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -55,6 +56,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.R
 import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
@@ -136,7 +138,7 @@ fun SharedTransitionScope.HomeScreen(
             ) {
                 CircularProgressIndicator()
                 Spacer(Modifier.height(12.dp))
-                Text("正在聚合订阅源…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.home_loading), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             is HomeUiState.Success -> {
@@ -153,13 +155,13 @@ fun SharedTransitionScope.HomeScreen(
                         )
                         Spacer(Modifier.height(12.dp))
                         Text(
-                            text = if (s.enabledCount == 0) "还没有启用任何订阅源\n到底部「设置」页勾选感兴趣的源"
-                            else "订阅源抓取失败，请检查网络\n（成功 ${s.loadedCount - s.failedCount}/${s.enabledCount}）",
+                            text = if (s.enabledCount == 0) stringResource(R.string.home_empty_disabled)
+                            else stringResource(R.string.home_empty_failed, s.loadedCount - s.failedCount, s.enabledCount),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(16.dp))
-                        Button(onClick = viewModel::refresh) { Text("重试") }
+                        Button(onClick = viewModel::refresh) { Text(stringResource(R.string.home_retry)) }
                     }
                 } else {
                     // ★ 下拉刷新

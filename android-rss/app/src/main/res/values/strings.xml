@@ -1,3 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FeedLite UI 文案（v1.35 i18n：全部呈现层字符串收敛于此） -->
 <resources>
     <string name="app_name">轻阅 RSS</string>
+
+    <!-- 底部导航 -->
+    <string name="nav_home">首页</string>
+    <string name="nav_starred">收藏</string>
+    <string name="nav_later">稍后再看</string>
+    <string name="nav_sources">源</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- 首页聚合流 -->
+    <string name="home_loading">正在聚合订阅源…</string>
+    <string name="home_empty_disabled">还没有启用任何订阅源\n到底部「设置」页勾选感兴趣的源</string>
+    <string name="home_empty_failed">订阅源抓取失败，请检查网络\n（成功 %1$d/%2$d）</string>
+    <string name="home_retry">重试</string>
+
+    <!-- 单源文章列表 -->
+    <string name="list_loading">正在抓取订阅源…</string>
+    <string name="list_failed_title">加载失败</string>
+    <string name="list_retry">重试</string>
+    <string name="list_default_title">文章列表</string>
+    <string name="list_back">返回</string>
+    <string name="list_refresh">刷新</string>
+    <string name="list_load_more">加载更多（%1$d/%2$d）</string>
+    <string name="list_all_loaded">已加载全部 %1$d 篇</string>
+    <string name="list_empty">该源暂时没有文章</string>
+
+    <!-- 文章详情页 -->
+    <string name="detail_back">返回</string>
+    <string name="detail_read_settings">阅读设置</string>
+    <string name="detail_unstar">取消收藏</string>
+    <string name="detail_star">收藏</string>
+    <string name="detail_remove_later">移出稍后再看</string>
+    <string name="detail_later">稍后再看</string>
+    <string name="detail_missing">文章不存在，请返回重试</string>
+    <string name="detail_show_label">显示：</string>
+    <string name="detail_original">原文</string>
+    <string name="detail_translation">译文</string>
+    <string name="detail_loading_fulltext">正在加载全文…</string>
+    <string name="detail_only_summary">该源仅提供标题摘要，正文请查看原文</string>
+    <string name="detail_no_summary">（该源未提供正文摘要）</string>
+    <string name="detail_open_web">查看全文</string>
+    <string name="detail_translating">正在翻译…</string>
+    <string name="detail_retry">重试</string>
+    <string name="detail_original_link">原文链接：%1$s</string>
+    <string name="detail_copy_code">复制代码</string>
+
+    <!-- 阅读设置面板 -->
+    <string name="reading_title">阅读设置</string>
+    <string name="reading_font_size">字号  %1$d%%</string>
+    <string name="reading_line_height">行高  %1$d%%</string>
+    <string name="reading_font">字体</string>
+    <string name="reading_font_sans">无衬线</string>
+    <string name="reading_font_serif">衬线</string>
+    <string name="reading_font_mono">等宽</string>
+    <string name="reading_hint">设置即时生效并自动保存，对阅读全文生效</string>
+    <string name="reading_done">完成</string>
+
+    <!-- 收藏页 -->
+    <string name="starred_exported">收藏已导出</string>
+    <string name="starred_export_failed">导出失败：%1$s</string>
+    <string name="starred_empty">还没有收藏的文章\n在文章详情页点右上角星标即可收藏</string>
+    <string name="starred_author_fallback">已收藏</string>
+    <string name="starred_export">导出收藏为 JSON</string>
+
+    <!-- 稍后再看页 -->
+    <string name="later_empty">没有挂起的文章\n在文章详情页点「书签」图标加入稍后再看</string>
+    <string name="later_initial">阅</string>
+    <string name="later_pending">挂起 · 点击阅读</string>
+
+    <!-- 设置页 -->
+    <string name="settings_appearance">外观</string>
+    <string name="settings_theme">主题</string>
+    <string name="settings_theme_system">跟随系统</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_translation_service">翻译服务</string>
+    <string name="settings_translation_desc">在文章详情页可将正文翻译为目标语言。密钥仅保存在本机。</string>
+    <string name="settings_provider">服务商</string>
+    <string name="settings_model">模型</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_api_key_hint">不会上传，仅用于翻译请求</string>
+    <string name="settings_target_lang">目标语言</string>
+    <string name="settings_reading">阅读设置</string>
+    <string name="settings_reading_desc">应用于文章详情页的正文排版。</string>
+    <string name="settings_font_size">字号</string>
+    <string name="settings_font_size_value">当前 %1$d%%</string>
+    <string name="settings_line_height">行高</string>
+    <string name="settings_line_height_value">当前 %1$d%%</string>
+    <string name="settings_font">字体</string>
+    <string name="settings_font_sans">无衬线</string>
+    <string name="settings_font_serif">衬线</string>
+    <string name="settings_font_mono">等宽</string>
+    <string name="settings_update_strategy">更新策略</string>
+    <string name="settings_update_desc">进入应用直接读缓存秒开，超过间隔才自动增量抓取新文章；手动刷新可随时强制更新。</string>
+    <string name="settings_update_interval">自动更新间隔</string>
+    <string name="settings_update_manual">手动</string>
+    <string name="settings_update_hours">%1$dh</string>
+    <string name="settings_notify_title">新文章通知</string>
+    <string name="settings_notify_desc">后台同步发现新文章时推送系统提醒</string>
+    <string name="settings_save_all">保存全部设置</string>
+    <string name="settings_testing">测试中…</string>
+    <string name="settings_test_connection">测试连接</string>
+    <string name="settings_test_ok">✓ 连接成功，返回：%1$s</string>
+    <string name="settings_saved">✓ 已保存</string>
+    <string name="settings_data">数据管理</string>
+    <string name="settings_export_opml">导出订阅</string>
+    <string name="settings_import_opml">导入订阅</string>
+    <string name="settings_opml_hint">OPML 文件可与其他阅读器互换订阅源</string>
+    <string name="settings_clear_read">清除全部已读标记</string>
+    <string name="settings_cache_cleared">缓存已清理</string>
+    <string name="settings_clear_cache">清理离线缓存（%1$s）</string>
+    <string name="settings_about">关于</string>
+    <string name="settings_security_hint">安全（v1.32）：翻译 API Key 已使用系统密钥库（Android Keystore）加密存储，仅限当前设备解密。</string>
+    <string name="settings_perm_denied">未授予通知权限，无法接收新文章提醒</string>
+    <string name="settings_exported">订阅已导出（%1$d 个）</string>
+    <string name="settings_export_failed">导出失败：%1$s</string>
+    <string name="settings_imported">导入完成：新增 %1$d 个订阅源</string>
+    <string name="settings_imported_invalid">，%1$d 个因地址无效跳过</string>
+    <string name="settings_import_failed">导入失败：%1$s</string>
+
+    <!-- 关于对话框 -->
+    <string name="about_title">轻阅 RSS v%1$s</string>
+    <string name="about_subtitle">极简 RSS 阅读器 · 基于 Android 16</string>
+    <string name="about_sources">内置 18 个订阅源（技术/AI/Go/商业/国际分类）</string>
+    <string name="about_features">富文本排版 · 阅读设置 · AI 翻译 · 离线缓存 · 稍后再看</string>
+    <string name="about_ok">好的</string>
+
+    <!-- 源管理 -->
+    <string name="sources_back">返回</string>
+    <string name="sources_search_hint">搜索源 / 分类…</string>
+    <string name="sources_add">添加订阅源</string>
+    <string name="sources_convert_help">公众号 / 微博转源帮助</string>
+    <string name="sources_delete">删除 %1$s</string>
+    <string name="sources_dialog_title">添加 RSS 源</string>
+    <string name="sources_dialog_name">名称（如：我的博客）</string>
+    <string name="sources_dialog_url">Feed 地址（如：example.com/feed）</string>
+    <string name="sources_dialog_add">添加</string>
+    <string name="sources_dialog_cancel">取消</string>
+    <string name="sources_help_title">公众号 / 微博 转 RSS</string>
+    <string name="sources_help_wechat">微信公众号</string>
+    <string name="sources_help_wechat_body">1. 自建 Wechat2RSS（wechat2rss.xlab.app，需一台服务器）；\n2. 或使用 RSSHub 的 /wechat/ 相关路由；\n3. 得到 feed 地址后，通过「添加订阅源」填入即可。</string>
+    <string name="sources_help_weibo">微博</string>
+    <string name="sources_help_weibo_body">1. 使用 RSSHub 路由 /weibo/user/{uid}；\n2. uid 为微博用户数字 ID（可在个人主页 URL 中查看）；\n3. 公共实例可能限流，建议自建 RSSHub（github.com/DIYgod/RSSHub）。</string>
+    <string name="sources_help_ok">知道了</string>
+
+    <!-- 新文章通知 -->
+    <string name="notify_channel_name">新文章提醒</string>
+    <string name="notify_channel_desc">后台同步抓取到新文章时提醒</string>
+    <string name="notify_title">%1$d 篇新文章</string>
 </resources>

@@ -49,10 +49,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.R
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.ui.ArticleCache
@@ -94,7 +96,7 @@ fun SharedTransitionScope.ReadLaterScreen(
                         modifier = Modifier.size(64.dp),
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("没有挂起的文章\n在文章详情页点「书签」图标加入稍后再看", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.later_empty), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -160,14 +162,14 @@ fun SharedTransitionScope.ReadLaterScreen(
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
-                                        text = item.author.takeIf { it.isNotBlank() }?.take(1) ?: "阅",
+                                        text = item.author.takeIf { it.isNotBlank() }?.take(1) ?: stringResource(R.string.later_initial),
                                         style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary,
                                     )
                                 }
                                 Spacer(Modifier.width(6.dp))
                                 Text(
-                                    text = "挂起 · 点击阅读",
+                                    text = stringResource(R.string.later_pending),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,

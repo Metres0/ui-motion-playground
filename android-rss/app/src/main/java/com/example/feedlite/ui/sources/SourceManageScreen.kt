@@ -48,8 +48,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.example.feedlite.R
 import com.example.feedlite.data.FeedCategory
 import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.SubscriptionStore
@@ -92,7 +94,7 @@ fun SourceManageScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(24.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.sources_back), modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -126,7 +128,7 @@ fun SourceManageScreen(
                         decorationBox = { inner ->
                             if (search.isEmpty()) {
                                 Text(
-                                    "搜索源 / 分类…",
+                                    stringResource(R.string.sources_search_hint),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -174,13 +176,13 @@ fun SourceManageScreen(
             OutlinedButton(onClick = { showAddSource = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("添加订阅源")
+                Text(stringResource(R.string.sources_add))
             }
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = { showConvertHelp = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("公众号 / 微博转源帮助")
+                Text(stringResource(R.string.sources_convert_help))
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -245,7 +247,7 @@ private fun SourceRow(
             IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "删除 ${source.title}",
+                    contentDescription = stringResource(R.string.sources_delete, source.title),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp),
                 )
@@ -263,19 +265,19 @@ private fun AddSourceDialog(onConfirm: (String, String) -> Unit, onDismiss: () -
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.RssFeed, contentDescription = null) },
-        title = { Text("添加 RSS 源") },
+        title = { Text(stringResource(R.string.sources_dialog_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("名称（如：我的博客）") },
+                    label = { Text(stringResource(R.string.sources_dialog_name)) },
                     singleLine = true,
                 )
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("Feed 地址（如：example.com/feed）") },
+                    label = { Text(stringResource(R.string.sources_dialog_url)) },
                     singleLine = true,
                 )
             }
@@ -287,10 +289,10 @@ private fun AddSourceDialog(onConfirm: (String, String) -> Unit, onDismiss: () -
                     onConfirm(title.trim(), url.trim())
                     onDismiss()
                 },
-            ) { Text("添加") }
+            ) { Text(stringResource(R.string.sources_dialog_add)) }
         },
         dismissButton = {
-            IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "取消") }
+            IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = stringResource(R.string.sources_dialog_cancel)) }
         },
     )
 }
@@ -301,30 +303,26 @@ private fun ConvertHelpDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
-        title = { Text("公众号 / 微博 转 RSS") },
+        title = { Text(stringResource(R.string.sources_help_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("微信公众号", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.sources_help_wechat), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "1. 自建 Wechat2RSS（wechat2rss.xlab.app，需一台服务器）；\n" +
-                        "2. 或使用 RSSHub 的 /wechat/ 相关路由；\n" +
-                        "3. 得到 feed 地址后，通过「添加订阅源」填入即可。",
+                    stringResource(R.string.sources_help_wechat_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 HorizontalDivider()
-                Text("微博", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.sources_help_weibo), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    "1. 使用 RSSHub 路由 /weibo/user/{uid}；\n" +
-                        "2. uid 为微博用户数字 ID（可在个人主页 URL 中查看）；\n" +
-                        "3. 公共实例可能限流，建议自建 RSSHub（github.com/DIYgod/RSSHub）。",
+                    stringResource(R.string.sources_help_weibo_body),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("知道了") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.sources_help_ok)) }
         },
     )
 }

@@ -58,11 +58,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.feedlite.R
 import com.example.feedlite.data.CacheManager
 import com.example.feedlite.data.Opml
 import com.example.feedlite.data.ReadingSettings
@@ -118,7 +120,7 @@ fun SettingsScreen(
             viewModel.setNotifyEnabled(true)
         } else {
             viewModel.setNotifyEnabled(false)
-            android.widget.Toast.makeText(context, "未授予通知权限，无法接收新文章提醒", android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, context.getString(R.string.settings_perm_denied), android.widget.Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -132,9 +134,9 @@ fun SettingsScreen(
                 context.contentResolver.openOutputStream(uri)?.use {
                     it.write(Opml.export(sources).toByteArray(Charsets.UTF_8))
                 }
-                android.widget.Toast.makeText(context, "订阅已导出（${sources.size} 个）", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.settings_exported, sources.size), android.widget.Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "导出失败：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.settings_export_failed, e.message), android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -152,10 +154,10 @@ fun SettingsScreen(
                         if (subscriptionStore.addCustom(title, url) == null) added++ else invalid++
                     }
                 }
-                importMsg = "导入完成：新增 $added 个订阅源" +
-                    if (invalid > 0) "，$invalid 个因地址无效跳过" else ""
+                importMsg = context.getString(R.string.settings_imported, added) +
+                    if (invalid > 0) context.getString(R.string.settings_imported_invalid, invalid) else ""
             } catch (e: Exception) {
-                importMsg = "导入失败：${e.message}"
+                importMsg = context.getString(R.string.settings_import_failed, e.message)
             }
         }
     }
@@ -171,25 +173,25 @@ fun SettingsScreen(
         Column(Modifier.padding(16.dp)) {
 
             // ★ v1.30：订阅源管理已独立为底部 Tab「源」，设置页不再保留入口
-            Text("外观", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_appearance), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
-            Text("主题", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_theme), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = themeMode == ThemeSettings.MODE_SYSTEM,
                     onClick = { themeSettings.setMode(ThemeSettings.MODE_SYSTEM) },
-                    label = { Text("跟随系统") },
+                    label = { Text(stringResource(R.string.settings_theme_system)) },
                 )
                 FilterChip(
                     selected = themeMode == ThemeSettings.MODE_LIGHT,
                     onClick = { themeSettings.setMode(ThemeSettings.MODE_LIGHT) },
-                    label = { Text("浅色") },
+                    label = { Text(stringResource(R.string.settings_theme_light)) },
                 )
                 FilterChip(
                     selected = themeMode == ThemeSettings.MODE_DARK,
                     onClick = { themeSettings.setMode(ThemeSettings.MODE_DARK) },
-                    label = { Text("深色") },
+                    label = { Text(stringResource(R.string.settings_theme_dark)) },
                 )
             }
 
@@ -198,15 +200,15 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // ════════ 翻译服务 ════════
-            Text("翻译服务", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_translation_service), style = MaterialTheme.typography.titleMedium)
             Text(
-                "在文章详情页可将正文翻译为目标语言。密钥仅保存在本机。",
+                stringResource(R.string.settings_translation_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
 
-            Text("服务商", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_provider), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TranslationStore.PROVIDERS.forEach { p ->
@@ -231,7 +233,7 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = config.model,
                 onValueChange = { v -> viewModel.update { it.copy(model = v) } },
-                label = { Text("模型") },
+                label = { Text(stringResource(R.string.settings_model)) },
                 placeholder = { Text("deepseek-chat") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -240,8 +242,8 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = config.apiKey,
                 onValueChange = { v -> viewModel.update { it.copy(apiKey = v) } },
-                label = { Text("API Key") },
-                supportingText = { Text("不会上传，仅用于翻译请求") },
+                label = { Text(stringResource(R.string.settings_api_key)) },
+                supportingText = { Text(stringResource(R.string.settings_api_key_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -249,7 +251,7 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = config.targetLang,
                 onValueChange = { v -> viewModel.update { it.copy(targetLang = v) } },
-                label = { Text("目标语言") },
+                label = { Text(stringResource(R.string.settings_target_lang)) },
                 placeholder = { Text("中文") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
@@ -260,15 +262,15 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // ════════ 阅读设置 ════════
-            Text("阅读设置", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_reading), style = MaterialTheme.typography.titleMedium)
             Text(
-                "应用于文章详情页的正文排版。",
+                stringResource(R.string.settings_reading_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
 
-            Text("字号", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_font_size), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Slider(
                 value = reading.fontSizeScale,
                 onValueChange = { v -> viewModel.updateReading { it.copy(fontSizeScale = v) } },
@@ -276,13 +278,13 @@ fun SettingsScreen(
                 steps = 10,
             )
             Text(
-                "当前 ${(reading.fontSizeScale * 100).roundToInt()}%",
+                stringResource(R.string.settings_font_size_value, (reading.fontSizeScale * 100).roundToInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
 
-            Text("行高", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_line_height), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Slider(
                 value = reading.lineHeightScale,
                 onValueChange = { v -> viewModel.updateReading { it.copy(lineHeightScale = v) } },
@@ -290,29 +292,29 @@ fun SettingsScreen(
                 steps = 8,
             )
             Text(
-                "当前 ${(reading.lineHeightScale * 100).roundToInt()}%",
+                stringResource(R.string.settings_line_height_value, (reading.lineHeightScale * 100).roundToInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
 
-            Text("字体", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_font), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = reading.fontFamily == ReadingSettings.FONT_SANS,
                     onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_SANS) } },
-                    label = { Text("无衬线") },
+                    label = { Text(stringResource(R.string.settings_font_sans)) },
                 )
                 FilterChip(
                     selected = reading.fontFamily == ReadingSettings.FONT_SERIF,
                     onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_SERIF) } },
-                    label = { Text("衬线") },
+                    label = { Text(stringResource(R.string.settings_font_serif)) },
                 )
                 FilterChip(
                     selected = reading.fontFamily == ReadingSettings.FONT_MONO,
                     onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_MONO) } },
-                    label = { Text("等宽") },
+                    label = { Text(stringResource(R.string.settings_font_mono)) },
                 )
             }
 
@@ -321,21 +323,21 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // ════════ 更新策略 ════════
-            Text("更新策略", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_update_strategy), style = MaterialTheme.typography.titleMedium)
             Text(
-                "进入应用直接读缓存秒开，超过间隔才自动增量抓取新文章；手动刷新可随时强制更新。",
+                stringResource(R.string.settings_update_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(12.dp))
 
-            Text("自动更新间隔", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.settings_update_interval), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 UpdateSettings.OPTIONS.forEach { h ->
                     val label = when (h) {
-                        0 -> "手动"
-                        else -> "${h}h"
+                        0 -> context.getString(R.string.settings_update_manual)
+                        else -> context.getString(R.string.settings_update_hours, h)
                     }
                     FilterChip(
                         selected = updateCfg.intervalHours == h,
@@ -352,10 +354,10 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("新文章通知", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.settings_notify_title), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "后台同步发现新文章时推送系统提醒",
+                        stringResource(R.string.settings_notify_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -390,7 +392,7 @@ fun SettingsScreen(
                         }
                     },
                     modifier = Modifier.weight(1f),
-                ) { Text("保存全部设置") }
+                ) { Text(stringResource(R.string.settings_save_all)) }
                 // ★ 测试连接：用当前配置发翻译请求验证
                 OutlinedButton(
                     onClick = { viewModel.testConnection({}) },
@@ -400,9 +402,9 @@ fun SettingsScreen(
                     if (testState is SettingsViewModel.TestState.Testing) {
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(6.dp))
-                        Text("测试中…")
+                        Text(stringResource(R.string.settings_testing))
                     } else {
-                        Text("测试连接")
+                        Text(stringResource(R.string.settings_test_connection))
                     }
                 }
             }
@@ -410,7 +412,7 @@ fun SettingsScreen(
             when (val t = testState) {
                 is SettingsViewModel.TestState.Success -> {
                     Spacer(Modifier.height(8.dp))
-                    Text("✓ 连接成功，返回：${t.reply.take(40)}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(R.string.settings_test_ok, t.reply.take(40)), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
                 }
                 is SettingsViewModel.TestState.Fail -> {
                     Spacer(Modifier.height(8.dp))
@@ -421,7 +423,7 @@ fun SettingsScreen(
 
             if (saved && error == null) {
                 Spacer(Modifier.height(8.dp))
-                Text("✓ 已保存", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.settings_saved), color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
             }
             if (error != null) {
                 Spacer(Modifier.height(8.dp))
@@ -433,7 +435,7 @@ fun SettingsScreen(
             Spacer(Modifier.height(16.dp))
 
             // ════════ 数据管理 ════════
-            Text("数据管理", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.settings_data), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(12.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -444,7 +446,7 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Default.IosShare, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("导出订阅")
+                    Text(stringResource(R.string.settings_export_opml))
                 }
                 // 导入 OPML
                 OutlinedButton(
@@ -453,12 +455,12 @@ fun SettingsScreen(
                 ) {
                     Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("导入订阅")
+                    Text(stringResource(R.string.settings_import_opml))
                 }
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                "OPML 文件可与其他阅读器互换订阅源",
+                stringResource(R.string.settings_opml_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -470,7 +472,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("清除全部已读标记")
+                Text(stringResource(R.string.settings_clear_read))
             }
             importMsg?.let { msg ->
                 Spacer(Modifier.height(8.dp))
@@ -488,7 +490,7 @@ fun SettingsScreen(
             OutlinedButton(
                 onClick = {
                     cacheManager.clear() // 内部会重建目录，缓存写入不失效
-                    android.widget.Toast.makeText(context, "缓存已清理", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, context.getString(R.string.settings_cache_cleared), android.widget.Toast.LENGTH_SHORT).show()
                     cacheScope.launch {
                         cacheSize = withContext(Dispatchers.IO) { cacheManager.sizeText() }
                     }
@@ -497,7 +499,7 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("清理离线缓存（$cacheSize）")
+                Text(stringResource(R.string.settings_clear_cache, cacheSize))
             }
 
             Spacer(Modifier.height(16.dp))
@@ -507,12 +509,12 @@ fun SettingsScreen(
             ) {
                 Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("关于")
+                Text(stringResource(R.string.settings_about))
             }
 
             Spacer(Modifier.height(24.dp))
             Text(
-                "安全（v1.32）：翻译 API Key 已使用系统密钥库（Android Keystore）加密存储，仅限当前设备解密。",
+                stringResource(R.string.settings_security_hint),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
             )
@@ -537,16 +539,16 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.size(40.dp),
             )
         },
-        title = { Text("轻阅 RSS v${com.example.feedlite.BuildConfig.VERSION_NAME}") },
+        title = { Text(stringResource(R.string.about_title, com.example.feedlite.BuildConfig.VERSION_NAME)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("极简 RSS 阅读器 · 基于 Android 16")
-                Text("内置 18 个订阅源（技术/AI/Go/商业/国际分类）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("富文本排版 · 阅读设置 · AI 翻译 · 离线缓存 · 稍后再看", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.about_subtitle))
+                Text(stringResource(R.string.about_sources), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.about_features), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) { Text("好的") }
+            Button(onClick = onDismiss) { Text(stringResource(R.string.about_ok)) }
         },
     )
 }

@@ -48,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.displayCutout
@@ -57,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.R
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.ui.ArticleCache
@@ -93,9 +95,9 @@ fun SharedTransitionScope.StarredScreen(
                 context.contentResolver.openOutputStream(uri)?.use {
                     it.write(readingState.exportJson().toByteArray(Charsets.UTF_8))
                 }
-                android.widget.Toast.makeText(context, "收藏已导出", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.starred_exported), android.widget.Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                android.widget.Toast.makeText(context, "导出失败：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.getString(R.string.starred_export_failed, e.message), android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -117,7 +119,7 @@ fun SharedTransitionScope.StarredScreen(
                         modifier = Modifier.size(64.dp),
                     )
                     Spacer(Modifier.height(12.dp))
-                    Text("还没有收藏的文章\n在文章详情页点右上角星标即可收藏", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.starred_empty), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         } else {
@@ -173,7 +175,7 @@ fun SharedTransitionScope.StarredScreen(
                                 Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
                                 Spacer(Modifier.width(4.dp))
                                 Text(
-                                    text = item.author.takeIf { it.isNotBlank() } ?: "已收藏",
+                                    text = item.author.takeIf { it.isNotBlank() } ?: stringResource(R.string.starred_author_fallback),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
@@ -192,7 +194,7 @@ fun SharedTransitionScope.StarredScreen(
                     ) {
                         Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("导出收藏为 JSON")
+                        Text(stringResource(R.string.starred_export))
                     }
                 }
             }

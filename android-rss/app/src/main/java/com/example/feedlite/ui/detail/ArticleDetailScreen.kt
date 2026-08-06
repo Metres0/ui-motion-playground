@@ -67,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -86,6 +87,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
+import com.example.feedlite.R
 import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.ImageContext
@@ -199,7 +201,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(22.dp))
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.detail_back), modifier = Modifier.size(22.dp))
                 }
                 Spacer(Modifier.weight(1f))
                 // ★ 收藏
@@ -209,14 +211,14 @@ fun SharedTransitionScope.ArticleDetailScreen(
                         "Aa",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.semantics { contentDescription = "阅读设置" },
+                        modifier = Modifier.semantics { contentDescription = context.getString(R.string.detail_read_settings) },
                     )
                 }
                 // ★ 收藏
                 IconButton(onClick = { toggleStar() }, modifier = Modifier.size(40.dp)) {
                     Icon(
                         if (starred) Icons.Default.Star else Icons.Default.StarBorder,
-                        contentDescription = if (starred) "取消收藏" else "收藏",
+                        contentDescription = if (starred) stringResource(R.string.detail_unstar) else stringResource(R.string.detail_star),
                         tint = if (starred) MaterialTheme.colorScheme.primary else Color.Unspecified,
                         modifier = Modifier.size(22.dp),
                     )
@@ -225,7 +227,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 IconButton(onClick = { toggleLater() }, modifier = Modifier.size(40.dp)) {
                     Icon(
                         if (later) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                        contentDescription = if (later) "移出稍后再看" else "稍后再看",
+                        contentDescription = if (later) stringResource(R.string.detail_remove_later) else stringResource(R.string.detail_later),
                         tint = if (later) MaterialTheme.colorScheme.primary else Color.Unspecified,
                         modifier = Modifier.size(22.dp),
                     )
@@ -238,7 +240,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 Modifier.fillMaxSize().padding(padding).padding(32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text("文章不存在，请返回重试", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.detail_missing), style = MaterialTheme.typography.bodyMedium)
             }
             return@Scaffold
         }
@@ -295,18 +297,18 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 // ── ★ 原文 / 译文 切换（有译文时显示） ─────
                 if (translation is TranslationUiState.Done) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("显示：", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.detail_show_label), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(Modifier.width(8.dp))
                         FilterChip(
                             selected = !showTranslation,
                             onClick = { viewModel.toggleTranslation() },
-                            label = { Text("原文") },
+                            label = { Text(stringResource(R.string.detail_original)) },
                         )
                         Spacer(Modifier.width(8.dp))
                         FilterChip(
                             selected = showTranslation,
                             onClick = { viewModel.toggleTranslation() },
-                            label = { Text("译文") },
+                            label = { Text(stringResource(R.string.detail_translation)) },
                         )
                     }
                     Spacer(Modifier.height(12.dp))
@@ -330,7 +332,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                                 Spacer(Modifier.width(8.dp))
-                                Text("正在加载全文…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(stringResource(R.string.detail_loading_fulltext), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         is FullTextUiState.Fail -> {
@@ -340,7 +342,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                             } else {
                                 Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                                     Text(
-                                        "该源仅提供标题摘要，正文请查看原文",
+                                        stringResource(R.string.detail_only_summary),
                                         style = bodyStyle,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -358,7 +360,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                                 RenderBlocks(effectiveBlocks, bodyStyle, context)
                             } else {
                                 Text(
-                                    "（该源未提供正文摘要）",
+                                    stringResource(R.string.detail_no_summary),
                                     style = bodyStyle,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -376,7 +378,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                     ) {
                         Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("查看全文")
+                        Text(stringResource(R.string.detail_open_web))
                     }
                 }
 
@@ -388,7 +390,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(8.dp))
-                            Text("正在翻译…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(stringResource(R.string.detail_translating), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     is TranslationUiState.Error -> {
@@ -401,7 +403,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                                 color = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.weight(1f),
                             )
-                            TextButton(onClick = { viewModel.translate() }) { Text("重试") }
+                            TextButton(onClick = { viewModel.translate() }) { Text(stringResource(R.string.detail_retry)) }
                         }
                     }
                     else -> Unit
@@ -410,7 +412,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 Spacer(Modifier.height(24.dp))
                 if (item.link.isNotBlank()) {
                     Text(
-                        text = "原文链接：${item.link}",
+                        text = stringResource(R.string.detail_original_link, item.link),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline,
                         maxLines = 1,
@@ -638,7 +640,7 @@ private fun CodeBlockView(block: HtmlBlocks.Block.CodeBlock) {
             IconButton(onClick = { clipboard.setText(AnnotatedString(block.code)) }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Default.ContentCopy,
-                    contentDescription = "复制代码",
+                    contentDescription = stringResource(R.string.detail_copy_code),
                     tint = Color(0xFF8A8A9A),
                     modifier = Modifier.size(16.dp),
                 )
@@ -693,10 +695,10 @@ private fun ReadingSettingsPanel(
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 32.dp)) {
-            Text("阅读设置", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.reading_title), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(16.dp))
 
-            Text("字号  ${(reading.fontSizeScale * 100).roundToInt()}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.reading_font_size, (reading.fontSizeScale * 100).roundToInt()), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Slider(
                 value = reading.fontSizeScale,
                 onValueChange = { onUpdate(reading.copy(fontSizeScale = it)) },
@@ -705,7 +707,7 @@ private fun ReadingSettingsPanel(
             )
             Spacer(Modifier.height(8.dp))
 
-            Text("行高  ${(reading.lineHeightScale * 100).roundToInt()}%", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.reading_line_height, (reading.lineHeightScale * 100).roundToInt()), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Slider(
                 value = reading.lineHeightScale,
                 onValueChange = { onUpdate(reading.copy(lineHeightScale = it)) },
@@ -714,23 +716,23 @@ private fun ReadingSettingsPanel(
             )
             Spacer(Modifier.height(8.dp))
 
-            Text("字体", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text(stringResource(R.string.reading_font), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(
                     selected = reading.fontFamily == ReadingSettings.FONT_SANS,
                     onClick = { onUpdate(reading.copy(fontFamily = ReadingSettings.FONT_SANS)) },
-                    label = { Text("无衬线") },
+                    label = { Text(stringResource(R.string.reading_font_sans)) },
                 )
                 FilterChip(
                     selected = reading.fontFamily == ReadingSettings.FONT_SERIF,
                     onClick = { onUpdate(reading.copy(fontFamily = ReadingSettings.FONT_SERIF)) },
-                    label = { Text("衬线") },
+                    label = { Text(stringResource(R.string.reading_font_serif)) },
                 )
                 FilterChip(
                     selected = reading.fontFamily == ReadingSettings.FONT_MONO,
                     onClick = { onUpdate(reading.copy(fontFamily = ReadingSettings.FONT_MONO)) },
-                    label = { Text("等宽") },
+                    label = { Text(stringResource(R.string.reading_font_mono)) },
                 )
             }
 
@@ -738,13 +740,13 @@ private fun ReadingSettingsPanel(
             HorizontalDivider()
             Spacer(Modifier.height(12.dp))
             Text(
-                "设置即时生效并自动保存，对阅读全文生效",
+                stringResource(R.string.reading_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
-                Text("完成")
+                Text(stringResource(R.string.reading_done))
             }
         }
     }

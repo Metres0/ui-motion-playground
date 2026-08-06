@@ -45,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
@@ -53,6 +54,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.R
 import com.example.feedlite.data.HtmlText
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.collectAsState
@@ -106,17 +108,17 @@ fun SharedTransitionScope.ArticleListScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
-                        else -> Text("文章列表")
+                        else -> Text(stringResource(R.string.list_default_title))
                     }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.list_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = viewModel::refresh) {
-                        Icon(Icons.Default.Refresh, contentDescription = "刷新")
+                        Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.list_refresh))
                     }
                 },
             )
@@ -177,10 +179,10 @@ fun SharedTransitionScope.ArticleListScreen(
                             )
                         }
                     } else if (items.isNotEmpty()) {
-                        item { Text("已加载全部 ${items.size} 篇", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp)) }
+                        item { Text(stringResource(R.string.list_all_loaded, items.size), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp)) }
                     }
                     if (items.isEmpty()) {
-                        item { Text("该源暂时没有文章", modifier = Modifier.padding(32.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        item { Text(stringResource(R.string.list_empty), modifier = Modifier.padding(32.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
                     } // closes LazyColumn content lambda
                 } // closes Column
@@ -286,7 +288,7 @@ private fun LoadMoreButton(shown: Int, total: Int, onClick: () -> Unit) {
         OutlinedButton(onClick = onClick) {
             Icon(Icons.Default.UnfoldMore, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(6.dp))
-            Text("加载更多（${shown}/${total}）")
+            Text(stringResource(R.string.list_load_more, shown, total))
         }
     }
 }
@@ -296,17 +298,17 @@ private fun LoadingState(modifier: Modifier = Modifier) {
     Column(modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
         CircularProgressIndicator()
         Spacer(Modifier.height(12.dp))
-        Text("正在抓取订阅源…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.list_loading), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 @Composable
 private fun ErrorState(message: String, modifier: Modifier = Modifier, onRetry: () -> Unit) {
     Column(modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("加载失败", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.list_failed_title), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onRetry) { Text("重试") }
+        Button(onClick = onRetry) { Text(stringResource(R.string.list_retry)) }
     }
 }

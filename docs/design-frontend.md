@@ -209,6 +209,7 @@ app.js       ① 纯函数区（无 DOM，可单测） + ② DOM 接线区
 ## 6. 前端可扩展方向
 
 1. **无障碍深化**：正文语义化（Heading 层级合并到 TalkBack 导航）、大字体适配（当前正文用 sp 已随系统缩放，自定义字号是独立维度）。
-2. **i18n**：全部中文字符串进 `strings.xml`（含复数「N 篇」）。
+2. ✅ **i18n**（v1.35）：全部 UI 呈现层字符串进 `strings.xml`（约 130 条，含格式化占位符）；
+   VM 业务错误文案与通知纯函数输出为「逻辑文案」，随响应式存储重构一并接入。
 3. **Compose demo 产品化**：模拟 API 换真实接口后，`wasPrefetched` 语义不变（缓存事实判定），只需替换数据源。
 4. **Web demo 接框架**：`app.js` 纯函数区可平移为 TypeScript 模块；`startViewTransition` 逻辑可移植到 React/Vue Router（保留同名 `view-transition-name`）。

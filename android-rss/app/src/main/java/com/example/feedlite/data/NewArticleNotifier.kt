@@ -34,7 +34,7 @@ class NewArticleNotifier(private val context: Context) {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_nav_home) // RSS 信号图标（通知小图标要求纯 alpha 造型）
-            .setContentTitle("$total 篇新文章")
+            .setContentTitle(context.getString(R.string.notify_title, total))
             .setContentText(summary)
             .setAutoCancel(true)
             .setContentIntent(contentIntent)
@@ -49,10 +49,10 @@ class NewArticleNotifier(private val context: Context) {
         if (nm.getNotificationChannel(CHANNEL_ID) != null) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "新文章提醒",
+            context.getString(R.string.notify_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "后台同步抓取到新文章时提醒"
+            description = context.getString(R.string.notify_channel_desc)
         }
         nm.createNotificationChannel(channel)
     }

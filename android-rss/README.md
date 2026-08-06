@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 源管理独立 Tab + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.34**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.35**。
 
 ---
 
@@ -31,6 +31,16 @@
 | Key 加密 | 翻译 API Key 用 Android Keystore（AES/GCM）加密存储，不再明文落盘 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源；失败计数不再虚报 |
 | 后台同步 | 「自动更新」由 WorkManager 系统调度（网络可用时按间隔静默抓取） |
+
+## 二、v1.35 更新日志（i18n）
+
+1. **全量 UI 文案收敛到 `res/values/strings.xml`**：底部导航 / 首页 / 文章列表 / 详情页（含阅读设置面板）/
+   收藏 / 稍后再看 / 设置（含关于对话框）/ 源管理 / 新文章通知，约 130 条字符串全部资源化；
+2. **格式化字符串**：带参数文案（加载更多 N/M、成功 X/Y、清理缓存（大小）、原文链接等）统一用
+   `%1$d/%1$s` 占位符 + `stringResource(id, args)`；
+3. **范围界定**：ViewModel 层的业务错误消息与 `NotificationSummary` 纯函数输出（`N 篇 / 等 N 个源`）为
+   「逻辑文案」，保留中文——将随「响应式存储」重构统一接入资源（见 design-backend.md §10）；
+4. 为未来多语言（新增 `values-en/` 等）打平了地基，替换零界面行为。
 
 ## 二、v1.34 更新日志（新文章通知）
 
@@ -357,7 +367,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.34 / versionCode 35 |
+| 版本 | versionName 1.35 / versionCode 36 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

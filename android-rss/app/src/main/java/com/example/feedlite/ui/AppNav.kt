@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -88,11 +89,11 @@ fun AppNav(container: AppContainer) {
                 if (showBar) {
                 NavigationBar {
                     val items = listOf(
-                        Triple("home", R.drawable.ic_nav_home, "首页"),
-                        Triple("starred", R.drawable.ic_nav_star, "收藏"),
-                        Triple("later", R.drawable.ic_nav_bookmark, "稍后再看"),
-                        Triple("sources", R.drawable.ic_nav_source, "源"),
-                        Triple("settings", R.drawable.ic_nav_settings, "设置"),
+                        Triple("home", R.drawable.ic_nav_home, R.string.nav_home),
+                        Triple("starred", R.drawable.ic_nav_star, R.string.nav_starred),
+                        Triple("later", R.drawable.ic_nav_bookmark, R.string.nav_later),
+                        Triple("sources", R.drawable.ic_nav_source, R.string.nav_sources),
+                        Triple("settings", R.drawable.ic_nav_settings, R.string.nav_settings),
                     )
                     items.forEach { (route, iconRes, label) ->
                         val selected = current?.hierarchy?.any { it.route == route } == true
@@ -109,7 +110,7 @@ fun AppNav(container: AppContainer) {
                                 // ★ iOS 透明图标：靠 tint 着色，选中=品牌色，未选中=默认灰
                                 Icon(
                                     painterResource(iconRes),
-                                    contentDescription = label, // 无障碍标签，不显示文字
+                                    contentDescription = stringResource(label), // 无障碍标签，不显示文字
                                     tint = if (selected) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 )
                             },
