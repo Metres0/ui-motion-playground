@@ -223,8 +223,10 @@ cd android-compose && .\gradlew.bat testDebugUnitTest
 
 ## 10. 数据层演进方向
 
-1. **响应式存储**：`ReadingStateStore.version` tick 模式 → `Flow` 驱动的 store，订阅/收藏变更自动广播，删掉各页 `LaunchedEffect(version)` 手动重载与 `refreshTick` hack。
-2. **缓存淘汰**：`FullTextCache`/`Translator` 磁盘缓存按访问时间 LRU 淘汰，`CacheManager` 加 eviction（当前只有全清）。
-3. **真实网络层替换**：`HttpURLConnection` → OkHttp（已在图片链路引入），超时/重试/拦截统一。
-4. **后台同步增强**：per-source 连续失败计数 + 通知（新文章 N 篇）；WorkManager 前置校验源可达性。
-5. **key 迁移**：`RssParser` 已切换稳定 key，历史脏数据可在下次启动用旧 key 映射清洗。
+**状态标注**：✅ v1.33 已完成 ｜ 🔲 待做
+
+1. 🔲 **响应式存储**：`ReadingStateStore.version` tick 模式 → `Flow` 驱动的 store，订阅/收藏变更自动广播，删掉各页 `LaunchedEffect(version)` 手动重载与 `refreshTick` hack。
+2. ✅ **缓存淘汰**（v1.33）：`FullTextCache`（20MB/400 文件）与 `Translator`（20MB/500 文件）写入时自动 LRU 淘汰最旧文件；`CacheManager` 仍提供全清。
+3. ✅ **真实网络层替换**（v1.33）：RssRepository / ArticleFetcher / Translator 统一到共享 OkHttp 客户端（`AppContainer.httpClient`）。
+4. 🔲 **后台同步增强**（部分完成）：✅ per-source 连续失败计数 + 退避（`SyncFailureStore`，v1.33）；🔲 新文章 N 篇通知、WorkManager 前置校验源可达性。
+5. 🔲 **key 迁移**：`RssParser` 已切换稳定 key，历史脏数据可在下次启动用旧 key 映射清洗。

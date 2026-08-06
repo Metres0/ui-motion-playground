@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 源管理独立 Tab + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.32**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.33**。
 
 ---
 
@@ -31,6 +31,15 @@
 | Key 加密 | 翻译 API Key 用 Android Keystore（AES/GCM）加密存储，不再明文落盘 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源；失败计数不再虚报 |
 | 后台同步 | 「自动更新」由 WorkManager 系统调度（网络可用时按间隔静默抓取） |
+
+## 二、v1.33 更新日志（演进方向）
+
+1. **网络层统一 OkHttp**：RssRepository / ArticleFetcher / Translator 从 HttpURLConnection 迁到共享 OkHttp
+   客户端（`AppContainer.httpClient`，10s/20s 超时 + 自动重定向 + 连接失败重试），与图片链路一致；
+2. **磁盘缓存 LRU 淘汰**：全文缓存（20MB / 400 文件）与译文缓存（20MB / 500 文件）超限自动删除最旧文件，
+   长会话磁盘占用不再无界增长（`FullTextCache.evictIfNeeded` / `Translator.evictIfNeeded`）；
+3. **后台同步增强**：`SyncFailureStore` 按源追踪连续失败次数，达到 3 次暂停该源自动同步（下一周期重试），
+   成功后立即清零——某个源长期不可达不再每周期反复拖慢同步。
 
 ## 二、v1.32 更新日志（工程加固）
 
@@ -337,12 +346,12 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.32 / versionCode 33 |
+| 版本 | versionName 1.33 / versionCode 34 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
 | 图片 | Coil 2.7（渐进式淡入 300ms） |
-| 网络 | HttpURLConnection（超时 10s/15s，UA，自动重定向） |
+| 网络 | OkHttp 4.12（共享客户端 10s/20s，自动重定向，连接失败重试） |
 | 构建 | AGP 8.9.1 / Gradle 8.11.1 / Kotlin 2.0.21 / JDK 17 |
 
 ## 四、架构分层

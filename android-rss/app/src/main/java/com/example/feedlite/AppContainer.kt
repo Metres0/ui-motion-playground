@@ -6,14 +6,17 @@ import com.example.feedlite.data.FullTextCache
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.SyncFailureStore
 import com.example.feedlite.data.ThemeSettings
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.UpdateSettings
 import java.io.File
+import java.util.concurrent.TimeUnit
+import okhttp3.OkHttpClient
 
 /**
- * 应用级依赖容器（v1.32：手写最小 DI）。
+ * 应用级依赖容器（v1.32：手写最小 DI；v1.33：数据抓取统一走共享 OkHttp 客户端）。
  *
  * 替代 MainActivity 里逐个构造 + 8 参透传：所有依赖进程级单例一次创建，
  * 配置变更（旋转/字体缩放）时不再重建，预取缓存与在途请求不丢。
@@ -22,12 +25,21 @@ import java.io.File
 class AppContainer(context: Context) {
     private val appContext = context.applicationContext
 
+    /** 数据抓取共享 OkHttp 客户端（图片链路在 FeedLiteApp 另有带 Referer 拦截器的实例）。 */
+    val httpClient = OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .retryOnConnectionFailure(true)
+        .build()
+
     val subscriptionStore = SubscriptionStore(appContext)
-    val repository = RssRepository(appContext)
+    val repository = RssRepository(appContext, httpClient)
     val translationStore = TranslationStore(appContext)
-    val translator = Translator(translationStore, File(appContext.filesDir, "translations"))
+    val translator = Translator(translationStore, File(appContext.filesDir, "translations"), httpClient)
     val updateSettings = UpdateSettings(appContext)
-    val fetcher = ArticleFetcher(FullTextCache(appContext))
+    val fetcher = ArticleFetcher(FullTextCache(appContext), httpClient)
     val readingState = ReadingStateStore(appContext)
     val themeSettings = ThemeSettings(appContext)
+    val syncFailureStore = SyncFailureStore(appContext)
 }

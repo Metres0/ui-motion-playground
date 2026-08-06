@@ -3,11 +3,11 @@ package com.example.feedlite.data
 import com.example.feedlite.data.HttpUtil.readBounded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 /**
- * 全文抓取器（v1.8）：抓取文章 URL 的 HTML，readability-lite 提取正文，并离线缓存。
+ * 全文抓取器（v1.8；v1.33：统一 OkHttp）：抓取文章 URL 的 HTML，readability-lite 提取正文，并离线缓存。
  *
  * 少数派等源的 feed 只给短摘要，正文要抓原始网页：
  * 1. 先读 [FullTextCache] 离线缓存（命中直接返回，离线可看）；
@@ -15,7 +15,10 @@ import java.net.URL
  * 3. [extractMainContent] 按候选容器定位正文，div 配对提取并清理噪音；
  * 4. 结果写入缓存。
  */
-class ArticleFetcher(private val cache: FullTextCache? = null) {
+class ArticleFetcher(
+    private val cache: FullTextCache? = null,
+    private val client: OkHttpClient = OkHttpClient(),
+) {
 
     /** 抓取并提取正文 HTML（带缓存）；失败抛 [RssFetchException]。 */
     suspend fun fetchArticle(link: String): String = withContext(Dispatchers.IO) {
@@ -64,22 +67,17 @@ class ArticleFetcher(private val cache: FullTextCache? = null) {
     }
 
     private fun fetch(urlString: String): String {
-        val conn = URL(urlString).openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 20_000
-            conn.instanceFollowRedirects = true
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 FeedLite/1.5")
-            conn.setRequestProperty("Accept-Language", "zh-CN,zh;q=0.9")
-            val host = runCatching { java.net.URI(urlString).host }.getOrNull()
-            if (!host.isNullOrBlank()) conn.setRequestProperty("Referer", "https://$host/")
-            val code = conn.responseCode
-            if (code !in 200..299) throw RssFetchException("HTTP $code")
-            return conn.inputStream.use {
+        val builder = Request.Builder()
+            .url(urlString)
+            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 FeedLite/1.33")
+            .header("Accept-Language", "zh-CN,zh;q=0.9")
+        val host = runCatching { java.net.URI(urlString).host }.getOrNull()
+        if (!host.isNullOrBlank()) builder.header("Referer", "https://$host/")
+        client.newCall(builder.build()).execute().use { resp ->
+            if (!resp.isSuccessful) throw RssFetchException("HTTP ${resp.code}")
+            return resp.body?.byteStream()?.use {
                 it.readBounded(HttpUtil.MAX_ARTICLE_BYTES).toString(Charsets.UTF_8)
-            }
-        } finally {
-            conn.disconnect()
+            } ?: ""
         }
     }
 

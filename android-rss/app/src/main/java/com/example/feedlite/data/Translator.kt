@@ -3,11 +3,13 @@ package com.example.feedlite.data
 import com.example.feedlite.data.HttpUtil.readBounded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 import java.security.MessageDigest
 
 /**
@@ -20,9 +22,14 @@ import java.security.MessageDigest
  *
  * 译文按「原文 SHA1」缓存到 files/translations/，重复进入 / 离线直接命中秒显。
  */
-class Translator(private val store: TranslationStore, cacheDir: File?) {
+class Translator(
+    private val store: TranslationStore,
+    cacheDir: File?,
+    private val client: OkHttpClient = OkHttpClient(),
+) {
 
     private val cacheDir = cacheDir ?: File(System.getProperty("java.io.tmpdir"), "translations")
+    private val evictLock = Any()
 
     suspend fun translate(text: String): String = withContext(Dispatchers.IO) {
         // 磁盘缓存命中（离线可用）
@@ -60,24 +67,22 @@ class Translator(private val store: TranslationStore, cacheDir: File?) {
             })
         }
 
-        val conn = URL(url).openConnection() as HttpURLConnection
+        val conn = client.newCall(
+            Request.Builder()
+                .url(url)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer ${cfg.apiKey}")
+                .post(body.toString().toByteArray(Charsets.UTF_8).toRequestBody(JSON_MEDIA_TYPE))
+                .build()
+        ).execute()
         try {
-            conn.requestMethod = "POST"
-            conn.connectTimeout = 15_000
-            conn.readTimeout = 60_000
-            conn.setRequestProperty("Content-Type", "application/json")
-            conn.setRequestProperty("Authorization", "Bearer ${cfg.apiKey}")
-            conn.doOutput = true
-            conn.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                val err = conn.errorStream?.use { it.readBounded(4096) }?.toString(Charsets.UTF_8) ?: ""
-                throw TranslationException("接口返回 $code：${err.take(200)}")
+            if (!conn.isSuccessful) {
+                val err = conn.body?.byteStream()?.use { it.readBounded(4096) }?.toString(Charsets.UTF_8) ?: ""
+                throw TranslationException("接口返回 ${conn.code}：${err.take(200)}")
             }
-            val resp = conn.inputStream.use {
+            val resp = conn.body?.byteStream()?.use {
                 it.readBounded(HttpUtil.MAX_TRANSLATION_BYTES).toString(Charsets.UTF_8)
-            }
+            } ?: throw TranslationException("接口响应为空")
             val json = JSONObject(resp)
             val choices = json.optJSONArray("choices")
                 ?: throw TranslationException("响应缺少 choices 字段")
@@ -93,7 +98,7 @@ class Translator(private val store: TranslationStore, cacheDir: File?) {
             putCache(text, content)
             content
         } finally {
-            conn.disconnect()
+            conn.close()
         }
     }
 
@@ -116,10 +121,30 @@ class Translator(private val store: TranslationStore, cacheDir: File?) {
 
     private fun putCache(text: String, result: String) {
         try {
+            if (!cacheDir.exists()) cacheDir.mkdirs()
             cacheFileOf(text).writeText(result, Charsets.UTF_8)
+            evictIfNeeded()
         } catch (e: Exception) {
             // 写入失败忽略
         }
+    }
+
+    /** 磁盘译文缓存 LRU 淘汰（v1.33）：总量/文件数超限时删除最旧文件。 */
+    private fun evictIfNeeded() = synchronized(evictLock) {
+        val files = cacheDir.listFiles() ?: return
+        var total = files.sumOf { it.length() }
+        var count = files.size
+        if (total <= DiskLimits.MAX_TRANSLATION_BYTES && count <= DiskLimits.MAX_TRANSLATION_FILES) return
+        for (f in files.sortedBy { it.lastModified() }) {
+            if (total <= DiskLimits.MAX_TRANSLATION_BYTES && count <= DiskLimits.MAX_TRANSLATION_FILES) break
+            total -= f.length()
+            count--
+            f.delete()
+        }
+    }
+
+    companion object {
+        private val JSON_MEDIA_TYPE = "application/json; charset=utf-8".toMediaType()
     }
 }
 

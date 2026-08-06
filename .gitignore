@@ -5,6 +5,7 @@ keystore/
 # 构建产物
 build/
 .gradle/
+.kotlin/
 local.properties
 *.apk
 *.aab

@@ -1,17 +1,17 @@
 package com.example.feedlite.data
 
 import android.content.Context
+import com.example.feedlite.data.HttpUtil.readBounded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import com.example.feedlite.data.HttpUtil.readBounded
 import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 数据仓库（v1.4：本地缓存优先 + 增量更新；v1.32：强制刷新/上限/重试/失败追踪）。
+ * 数据仓库（v1.4：本地缓存优先 + 增量更新；v1.32：强制刷新/上限/重试/失败追踪；v1.33：统一 OkHttp）。
  *
  * 核心变化：
  * - 文章持久化到 [ArticleStore]，**进入应用直接读缓存秒开**；
@@ -21,7 +21,10 @@ import java.util.concurrent.ConcurrentHashMap
  * - 网络瞬时故障自动重试（1s / 2s 退避），HTTP 错误不重试；
  * - [updateSources] 单独返回失败源集合，首页「成功 X/Y」不再虚报。
  */
-class RssRepository(context: Context) {
+class RssRepository(
+    context: Context,
+    private val client: OkHttpClient,
+) {
 
     private val store = ArticleStore(context)
     private val cache = ConcurrentHashMap<String, CachedFeed>()
@@ -97,24 +100,20 @@ class RssRepository(context: Context) {
     }
 
     private fun fetchBytesOnce(urlString: String): ByteArray {
-        val conn = URL(urlString).openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = 10_000
-            conn.readTimeout = 15_000
-            conn.instanceFollowRedirects = true
-            conn.setRequestProperty("User-Agent", "FeedLite/1.32 (Android; RSS Reader)")
-            conn.setRequestProperty("Accept", "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8")
-            val code = conn.responseCode
-            if (code !in 200..299) {
-                throw RssFetchException("HTTP $code for $urlString")
+        val request = Request.Builder()
+            .url(urlString)
+            .header("User-Agent", "FeedLite/1.33 (Android; RSS Reader)")
+            .header("Accept", "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8")
+            .build()
+        client.newCall(request).execute().use { resp ->
+            if (!resp.isSuccessful) {
+                throw RssFetchException("HTTP ${resp.code} for $urlString")
             }
-            val declared = conn.contentLength
+            val declared = resp.body?.contentLength() ?: -1L
             if (declared > HttpUtil.MAX_FEED_BYTES) {
                 throw RssFetchException("响应过大（$declared B）for $urlString")
             }
-            return conn.inputStream.use { it.readBounded(HttpUtil.MAX_FEED_BYTES) }
-        } finally {
-            conn.disconnect()
+            return resp.body?.byteStream()?.use { it.readBounded(HttpUtil.MAX_FEED_BYTES) } ?: ByteArray(0)
         }
     }
 

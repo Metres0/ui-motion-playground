@@ -12,10 +12,11 @@ import androidx.work.WorkerParameters
 import java.util.concurrent.TimeUnit
 
 /**
- * 后台自动同步（v1.32）：把「自动更新」从"打开应用才生效"升级为系统级调度。
+ * 后台自动同步（v1.32；v1.33：per-source 失败计数 + 退避）。
  *
  * - 只更新满足更新间隔的启用源（[UpdateSettings.needsUpdate]）；
- * - 全部失败时返回 [Result.retry]，交给 WorkManager 指数退避；
+ * - 连续失败达到 [SyncFailureStore.MAX_CONSECUTIVE_FAILURES] 的源暂停本轮（退避），成功后清零；
+ * - 本轮全部失败时返回 [Result.retry]，交给 WorkManager 指数退避；
  * - 与前台刷新共用 [RssRepository.updateSources]（含失败追踪与重试）。
  */
 class FeedSyncWorker(
@@ -28,14 +29,21 @@ class FeedSyncWorker(
         val store = container.subscriptionStore
         val settings = container.updateSettings
         val repository = container.repository
+        val health = container.syncFailureStore
 
         val enabled = store.enabledIds()
         val sources = enabled.mapNotNull { id -> store.allSources().firstOrNull { it.id == id } }
-        val due = sources.filter { settings.needsUpdate(repository, it.id) }
+        val due = sources
+            .filter { settings.needsUpdate(repository, it.id) }
+            .filterNot { health.isInBackoff(it.id) } // ★ 退避中的源本轮跳过
         if (due.isEmpty()) return Result.success()
 
         val result = repository.updateSources(due)
-        return if (due.isNotEmpty() && result.failures.size == due.size) {
+        // 更新每源健康记录：成功清零，失败 +1
+        for (src in due) {
+            if (src.id in result.failures) health.recordFailure(src.id) else health.recordSuccess(src.id)
+        }
+        return if (result.failures.size == due.size) {
             Result.retry() // 全部失败：WorkManager 指数退避重试
         } else {
             Result.success()

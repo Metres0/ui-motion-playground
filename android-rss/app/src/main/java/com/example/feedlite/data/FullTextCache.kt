@@ -17,6 +17,7 @@ class FullTextCache(context: Context) {
 
     private val dir: File = File(context.filesDir, "fulltext").apply { mkdirs() }
     private val memory = ConcurrentHashMap<String, String>()
+    private val evictLock = Any()
 
     fun get(link: String): String? {
         memory[link]?.let { return it }
@@ -37,8 +38,23 @@ class FullTextCache(context: Context) {
             // 目录可能被 CacheManager.clear() 删除过，这里必须重建
             if (!dir.exists()) dir.mkdirs()
             fileOf(link).writeText(html, Charsets.UTF_8)
+            evictIfNeeded()
         } catch (e: Exception) {
             // 写入失败忽略（磁盘满等）
+        }
+    }
+
+    /** 磁盘全文缓存 LRU 淘汰（v1.33）：总量/文件数超限时删除最旧文件。 */
+    private fun evictIfNeeded() = synchronized(evictLock) {
+        val files = dir.listFiles() ?: return
+        var total = files.sumOf { it.length() }
+        var count = files.size
+        if (total <= DiskLimits.MAX_FULLTEXT_BYTES && count <= DiskLimits.MAX_FULLTEXT_FILES) return
+        for (f in files.sortedBy { it.lastModified() }) {
+            if (total <= DiskLimits.MAX_FULLTEXT_BYTES && count <= DiskLimits.MAX_FULLTEXT_FILES) break
+            total -= f.length()
+            count--
+            f.delete()
         }
     }
 
