@@ -82,6 +82,7 @@ import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.TimeUtils
 import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.components.ProgressiveImage
 import kotlinx.coroutines.delay
@@ -112,6 +113,7 @@ fun SharedTransitionScope.HomeScreen(
     val state by viewModel.state.collectAsState()
     val sources by viewModel.sources.collectAsState()
     val enabled by viewModel.enabled.collectAsState()
+    val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -209,20 +211,33 @@ fun SharedTransitionScope.HomeScreen(
                         ) {
                             groups.forEach { (cat, list) ->
                                 item(key = "header_$cat") {
-                                    Text(
-                                        cat,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-                                    )
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 10.dp, bottom = 4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            cat,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                        Spacer(Modifier.weight(1f))
+                                        Text(
+                                            "${list.size} 篇",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.outline,
+                                        )
+                                    }
                                 }
                                 items(list.size, key = { list[it].item.key }) { i ->
                                     val entry = list[i]
                                     HomeArticleCard(
                                         entry = entry,
                                         index = i,
-                                        isRead = readingState.isRead(entry.item.key),
+                                        readingState = readingState,
+                                        refreshKey = readVersion,
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         onClick = { onOpenArticle(entry.item) },
                                     )
@@ -251,18 +266,20 @@ fun SharedTransitionScope.HomeScreen(
     }
 }
 
-/** 首页聚合文章卡片。 */
+/** 首页聚合文章卡片（v1.8 排版：源名 + 标题 + 相对时间，已读状态随版本刷新）。 */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun SharedTransitionScope.HomeArticleCard(
     entry: FeedEntry,
     index: Int,
-    isRead: Boolean,
+    readingState: ReadingStateStore,
+    refreshKey: Int,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
     val enterOffset = remember(entry.item.key) { Animatable(MotionTokens.Space.Small) }
     val enterAlpha = remember(entry.item.key) { Animatable(0f) }
+    val isRead = remember(refreshKey, entry.item.key) { readingState.isRead(entry.item.key) }
 
     LaunchedEffect(entry.item.key) {
         delay((index % 10) * 30L)
@@ -287,7 +304,7 @@ private fun SharedTransitionScope.HomeArticleCard(
             contentDescription = null,
             modifier = Modifier
                 .size(64.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .sharedElement(
                     state = rememberSharedContentState(key = "thumb_${entry.item.key}"),
                     animatedVisibilityScope = animatedVisibilityScope,
@@ -295,13 +312,26 @@ private fun SharedTransitionScope.HomeArticleCard(
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(
-                text = entry.source.title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-            )
-            Spacer(Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = entry.source.title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                val time = TimeUtils.timeAgo(entry.item.pubDate)
+                if (time.isNotBlank()) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.outline,
+                        maxLines = 1,
+                    )
+                }
+            }
+            Spacer(Modifier.height(3.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // ★ 未读小圆点
                 if (!isRead) {
@@ -319,17 +349,6 @@ private fun SharedTransitionScope.HomeArticleCard(
                     else MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                     color = if (isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            // ★ 过滤「点击查看原文」等纯链接噪音，无实质内容不显示摘要
-            if (HtmlText.hasMeaningfulContent(entry.item.descriptionHtml)) {
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = HtmlText.excerpt(entry.item.descriptionHtml, 60),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }

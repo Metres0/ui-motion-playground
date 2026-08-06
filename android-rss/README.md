@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.7**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.8**。
 
 ---
 
@@ -28,6 +28,18 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.8 更新日志
+
+1. **脏标签二次兜底**：解析入口全局剥离 `data-v-xxx` 残留碎片；行内文本过滤
+   `class="..."` / `data-v-` 等**属性式残留文本**（InfoQ `_preview-wrap_xxx` 等一并拦截）；
+2. **修复收藏列表不刷新**：`ReadingStateStore` 增加版本号流，收藏页 / 首页 / 列表
+   collect 版本号自动刷新——详情页收藏/取消收藏后返回，列表即时更新；
+3. **首页排版改版**：分类头部改为「分类名 + 右侧篇数」；卡片改为
+   **源名 + 相对时间（x 分钟/小时/天前）同排 + 加粗标题 + 未读圆点**，更清爽；
+4. **深色模式**：设置 → 外观 → **跟随系统 / 浅色 / 深色**三选，全局即时生效；
+5. **收藏导出**：收藏页顶栏「导出」→ 系统文件选择器保存 **feedlite_favorites.json**；
+6. **全文离线缓存**：抓取到的全文 HTML 落盘（files/fulltext/），离线重开文章直接显示缓存全文。
 
 ## 二、v1.7 更新日志
 
@@ -112,7 +124,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.7 / versionCode 8 |
+| 版本 | versionName 1.8 / versionCode 9 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

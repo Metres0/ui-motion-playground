@@ -41,6 +41,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.data.ReadingSettings
+import com.example.feedlite.data.ThemeSettings
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.UpdateSettings
@@ -57,6 +58,7 @@ fun SettingsScreen(
     store: TranslationStore,
     translator: Translator,
     updateSettings: UpdateSettings,
+    themeSettings: ThemeSettings,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -69,6 +71,7 @@ fun SettingsScreen(
     val reading by viewModel.readingConfig.collectAsState()
     val updateCfg by viewModel.updateConfig.collectAsState()
     val testState by viewModel.testState.collectAsState()
+    val themeMode by themeSettings.mode.collectAsState()
     var saved by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -91,6 +94,33 @@ fun SettingsScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
+
+            // ════════ 外观 ════════
+            Text("外观", style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(12.dp))
+            Text("主题", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = themeMode == ThemeSettings.MODE_SYSTEM,
+                    onClick = { themeSettings.setMode(ThemeSettings.MODE_SYSTEM) },
+                    label = { Text("跟随系统") },
+                )
+                FilterChip(
+                    selected = themeMode == ThemeSettings.MODE_LIGHT,
+                    onClick = { themeSettings.setMode(ThemeSettings.MODE_LIGHT) },
+                    label = { Text("浅色") },
+                )
+                FilterChip(
+                    selected = themeMode == ThemeSettings.MODE_DARK,
+                    onClick = { themeSettings.setMode(ThemeSettings.MODE_DARK) },
+                    label = { Text("深色") },
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
 
             // ════════ 翻译服务 ════════
             Text("翻译服务", style = MaterialTheme.typography.titleMedium)

@@ -38,6 +38,12 @@ object HtmlBlocks {
     /** 引号感知的任意标签（用于 inline 丢弃未知标签）。 */
     private val ANY_TAG = Regex("""(?is)<(?:[a-zA-Z/!][^'">]*|"[^"]*"|'[^']*')*>""")
 
+    /** 判断纯文本是否像标签属性残留（如 `class="_xxx"`、`data-v-xxx`）。 */
+    private fun looksLikeAttributeText(text: String): Boolean {
+        if (text.length > 80) return false
+        return text.contains("=\"") || text.contains("data-v-")
+    }
+
     /** 判断图片是否像 emoji / 图标（不应渲染成大图）。 */
     private fun looksLikeEmoji(url: String, alt: String): Boolean {
         if (url.contains("emoji", ignoreCase = true)) return true
@@ -50,7 +56,9 @@ object HtmlBlocks {
     /** 解析 HTML 为块序列。段落内嵌图片会拆出独立 Image 块。 */
     fun parse(htmlInput: String): List<Block> {
         // 先剥离 HTML 注释（Vue 站残留 <!---->）
-        val html = htmlInput.replace(Regex("""(?is)<!--[\s\S]*?-->"""), "")
+        var html = htmlInput.replace(Regex("""(?is)<!--[\s\S]*?-->"""), "")
+        // ★ v1.8 兜底净化：剥离标签被切断后残留的 data-v-xxx 独立文本碎片（Vue/SSR 站常见）
+        html = html.replace(Regex("""\bdata-v-[a-zA-Z0-9_-]+\s*>?"""), " ")
         val blocks = ArrayList<Block>()
         val buf = StringBuilder()
 
@@ -202,7 +210,8 @@ object HtmlBlocks {
                 t.startsWith("<img", true) -> { /* 块级已处理，忽略 */ }
                 !t.startsWith("<") -> {
                     val plain = HtmlText.toPlainText(t)
-                    if (plain.isNotBlank()) spans += Span(plain)
+                    // ★ 过滤属性式残留文本（标签解析失败的兜底）：class="..." / data-v- 等
+                    if (plain.isNotBlank() && !looksLikeAttributeText(plain)) spans += Span(plain)
                 }
             }
         }

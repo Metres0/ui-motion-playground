@@ -21,8 +21,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -33,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -53,7 +58,9 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 /**
- * 收藏列表页：展示所有收藏文章，点击进入详情（共享元素转场）。
+ * 收藏列表页（v1.8）：
+ * - 版本号驱动刷新：返回本页 / 其他页取消收藏时列表自动更新；
+ * - 顶栏「导出」：把收藏导出为 JSON 文件（SAF）。
  */
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -63,7 +70,28 @@ fun SharedTransitionScope.StarredScreen(
     onBack: () -> Unit,
     onOpenArticle: (RssItem) -> Unit,
 ) {
+    val context = LocalContext.current
+    val version by readingState.version.collectAsState()
     var items by remember { mutableStateOf(readingState.starredItems()) }
+
+    // ★ 收藏变更时刷新列表
+    LaunchedEffect(version) { items = readingState.starredItems() }
+
+    // ★ 导出为 JSON 文件
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use {
+                    it.write(readingState.exportJson().toByteArray(Charsets.UTF_8))
+                }
+                android.widget.Toast.makeText(context, "收藏已导出", android.widget.Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                android.widget.Toast.makeText(context, "导出失败：${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -72,6 +100,11 @@ fun SharedTransitionScope.StarredScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { exportLauncher.launch("feedlite_favorites.json") }) {
+                        Icon(Icons.Default.Share, contentDescription = "导出收藏")
                     }
                 },
             )

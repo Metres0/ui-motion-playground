@@ -54,10 +54,13 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
 import com.example.feedlite.data.HtmlText
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.TimeUtils
 import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.components.ProgressiveImage
 import kotlinx.coroutines.delay
@@ -90,6 +93,7 @@ fun SharedTransitionScope.ArticleListScreen(
         }
     )
     val state by viewModel.state.collectAsState()
+    val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
 
     Scaffold(
         topBar = {
@@ -139,7 +143,8 @@ fun SharedTransitionScope.ArticleListScreen(
                         ArticleCard(
                             item = item,
                             index = i,
-                            isRead = readingState.isRead(item.key),
+                            readingState = readingState,
+                            refreshKey = readVersion,
                             animatedVisibilityScope = animatedVisibilityScope,
                             onClick = { onOpenArticle(item) },
                         )
@@ -170,12 +175,14 @@ fun SharedTransitionScope.ArticleListScreen(
 fun SharedTransitionScope.ArticleCard(
     item: RssItem,
     index: Int,
-    isRead: Boolean,
+    readingState: ReadingStateStore,
+    refreshKey: Int,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
     val enterOffset = remember(item.key) { Animatable(MotionTokens.Space.Small) }
     val enterAlpha = remember(item.key) { Animatable(0f) }
+    val isRead = remember(refreshKey, item.key) { readingState.isRead(item.key) }
 
     LaunchedEffect(item.key) {
         delay((index % 10) * 30L) // stagger 30ms/项
@@ -240,7 +247,9 @@ fun SharedTransitionScope.ArticleCard(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = item.pubDate.takeIf { it.isNotBlank() } ?: item.author.takeIf { it.isNotBlank() } ?: "",
+                text = TimeUtils.timeAgo(item.pubDate).ifBlank {
+                    item.author.takeIf { it.isNotBlank() } ?: ""
+                },
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
                 maxLines = 1,

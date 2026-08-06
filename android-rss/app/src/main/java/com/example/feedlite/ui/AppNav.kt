@@ -19,6 +19,7 @@ import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.ThemeSettings
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.UpdateSettings
@@ -48,6 +49,7 @@ fun AppNav(
     updateSettings: UpdateSettings,
     fetcher: ArticleFetcher,
     readingState: ReadingStateStore,
+    themeSettings: ThemeSettings,
 ) {
     val nav = rememberNavController()
 
@@ -158,6 +160,7 @@ fun AppNav(
                     store = translationStore,
                     translator = translator,
                     updateSettings = updateSettings,
+                    themeSettings = themeSettings,
                     onBack = { nav.popBackStack() },
                 )
             }

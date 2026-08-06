@@ -6,22 +6,33 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * 全文抓取器（v1.5）：抓取文章 URL 的 HTML，用 readability-lite 提取正文容器。
+ * 全文抓取器（v1.8）：抓取文章 URL 的 HTML，readability-lite 提取正文，并离线缓存。
  *
  * 少数派等源的 feed 只给短摘要，正文要抓原始网页：
- * 1. 抓取 article URL（带 Referer + 完整 UA）；
- * 2. [extractMainContent] 按候选容器（id/class/标签）定位正文区域，
- *    用 <div> 配对计数提取内嵌 HTML，清理 script/style/nav/header/footer/aside；
- * 3. 失败抛异常，由调用方降级为「查看全文」跳浏览器。
+ * 1. 先读 [FullTextCache] 离线缓存（命中直接返回，离线可看）；
+ * 2. 抓取 article URL（带 Referer + 完整 UA）；
+ * 3. [extractMainContent] 按候选容器定位正文，div 配对提取并清理噪音；
+ * 4. 结果写入缓存。
  */
-class ArticleFetcher {
+class ArticleFetcher(private val cache: FullTextCache? = null) {
 
-    /** 抓取并提取正文 HTML；失败抛 [RssFetchException]。 */
+    /** 抓取并提取正文 HTML（带缓存）；失败抛 [RssFetchException]。 */
     suspend fun fetchArticle(link: String): String = withContext(Dispatchers.IO) {
+        // 1. 离线缓存优先
+        cache?.get(link)?.let { return@withContext it }
+
+        // 2. 抓取 + 提取
         val html = fetch(link)
         val main = extractMainContent(html) ?: throw RssFetchException("未能在页面中找到正文区域")
-        normalizeImageUrls(main, link)
+        val normalized = normalizeImageUrls(main, link)
+
+        // 3. 写入缓存（供离线阅读）
+        cache?.put(link, normalized)
+        normalized
     }
+
+    /** 仅读缓存（离线场景，不发网络）。 */
+    fun cachedOrNull(link: String): String? = cache?.get(link)
 
     /**
      * 补全正文中的相对图片 URL：

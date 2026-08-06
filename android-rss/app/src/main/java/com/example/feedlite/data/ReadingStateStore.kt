@@ -2,16 +2,25 @@ package com.example.feedlite.data
 
 import android.content.Context
 import android.content.SharedPreferences
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * 阅读状态持久化（v1.7）：已读标记 + 收藏。
+ * 阅读状态持久化（v1.8）：已读标记 + 收藏 + 变更版本号（供 UI 刷新）。
  */
 class ReadingStateStore(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("reading_state", Context.MODE_PRIVATE)
+
+    /** 收藏/已读变更时自增；首页、列表、收藏页 collect 它来刷新。 */
+    private val _version = MutableStateFlow(0)
+    val version: StateFlow<Int> = _version.asStateFlow()
+
+    private fun bump() { _version.value += 1 }
 
     // ── 已读 ────────────────────────────────
     fun isRead(key: String): Boolean =
@@ -21,6 +30,7 @@ class ReadingStateStore(context: Context) {
         val set = prefs.getStringSet(KEY_READ, emptySet())?.toMutableSet() ?: mutableSetOf()
         if (set.add(key)) {
             prefs.edit().putStringSet(KEY_READ, set).apply()
+            bump()
         }
     }
 
@@ -35,12 +45,21 @@ class ReadingStateStore(context: Context) {
             map[item.key] = item; true
         }
         prefs.edit().putString(KEY_STARRED, JSONObject(map).toString()).apply()
+        bump() // ★ 通知收藏页/首页刷新
         return starred
     }
 
     fun starredItems(): List<RssItem> {
         val map = starredMap()
         return map.keys.mapNotNull { map[it] }
+    }
+
+    /** ★ 导出收藏为 JSON 文本。 */
+    fun exportJson(): String {
+        val items = starredItems()
+        val arr = JSONArray()
+        items.forEach { it.toJson().also { arr.put(it) } }
+        return arr.toString(2)
     }
 
     private fun starredMap(): Map<String, RssItem> {
