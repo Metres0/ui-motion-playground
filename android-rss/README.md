@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.21**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.22**。
 
 ---
 
@@ -28,6 +28,16 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.22 更新日志
+
+1. **去掉顶部刷新按钮，改下拉刷新**：首页列表使用 `PullToRefreshBox`，**下拉即刷新全部订阅**；
+   顶栏只保留菜单图标，顶部更干净；
+2. **滚动隐藏底部栏修复**：滚动方向监听改为**节流版**——只在「方向切换 / 回到顶部」时通知一次，
+   避免高频回调导致底部栏隐藏状态失效（此前下拉时 tab 有时不隐藏）；
+   下拉刷新时强制恢复底部栏；
+3. **抽屉点击修复**：抽屉内容去掉 `verticalScroll` 滚动容器——它会与各行的点击手势竞争，
+   导致「点击不动」；改为固定高度 Column，全部条目点击立即响应。
 
 ## 二、v1.21 更新日志
 
@@ -235,7 +245,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.21 / versionCode 22 |
+| 版本 | versionName 1.22 / versionCode 23 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

@@ -22,10 +22,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Add
@@ -35,7 +33,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -52,8 +49,8 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,16 +119,29 @@ fun SharedTransitionScope.HomeScreen(
     val enabled by viewModel.enabled.collectAsState()
     val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
 
-    // ★ 滚动方向监听：向下滚动（内容下移）隐藏底部栏，向上滚动显示
+    // ★ v1.22：下拉刷新状态（顶栏刷新按钮已移除）
+    var isRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(state) {
+        val updating = (state as? HomeUiState.Success)?.updating == true
+        if (!updating) isRefreshing = false
+    }
+
+    // ★ 滚动方向监听（v1.22 节流版）：只在「方向切换」或「回到顶部」时通知，避免状态风暴
     val listState = rememberLazyListState()
     LaunchedEffect(listState) {
         var lastIndex = listState.firstVisibleItemIndex
         var lastOffset = listState.firstVisibleItemScrollOffset
+        var lastDown: Boolean? = null
         snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
             .distinctUntilChanged()
             .collect { (index, offset) ->
-                val scrollingDown = index > lastIndex || (index == lastIndex && offset > lastOffset)
-                onScrollVisibilityChange(!scrollingDown)
+                val down = index > lastIndex || (index == lastIndex && offset > lastOffset)
+                val atTop = index == 0 && offset == 0
+                val target = if (atTop) true else !down
+                if (target != lastDown) {
+                    onScrollVisibilityChange(target)
+                    lastDown = target
+                }
                 lastIndex = index
                 lastOffset = offset
             }
@@ -195,13 +205,7 @@ fun SharedTransitionScope.HomeScreen(
                 ) {
                     Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(28.dp))
                 }
-                Spacer(Modifier.weight(1f))
-                IconButton(
-                    onClick = viewModel::refresh,
-                    modifier = Modifier.size(44.dp),
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(28.dp))
-                }
+                // ★ v1.22：刷新按钮已移除，改为列表下拉刷新
             }
 
             when (val s = state) {
@@ -239,24 +243,35 @@ fun SharedTransitionScope.HomeScreen(
                         }
                     } else {
                         // ★ v1.19：去掉分类标题行，全部文章直接铺开（顶部空间让给内容/侧边栏）
+                        // ★ v1.22：列表包 PullToRefreshBox，下拉即刷新
                         val entries = s.entries
-                        LazyColumn(
-                            state = listState,
+                        PullToRefreshBox(
+                            isRefreshing = isRefreshing,
+                            onRefresh = {
+                                isRefreshing = true
+                                viewModel.refresh()
+                                onScrollVisibilityChange(true) // 下拉刷新时恢复底栏
+                            },
                             modifier = Modifier.fillMaxSize(),
-                            // ★ 顶部留图标行 + 呼吸间距
-                            contentPadding = PaddingValues(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
-                            items(entries.size, key = { entries[it].item.key }) { i ->
-                                val entry = entries[i]
-                                HomeArticleCard(
-                                    entry = entry,
-                                    index = i,
-                                    readingState = readingState,
-                                    refreshKey = readVersion,
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    onClick = { onOpenArticle(entry.item) },
-                                )
-                                Spacer(Modifier.height(12.dp))
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.fillMaxSize(),
+                                // ★ 顶部留图标行 + 呼吸间距
+                                contentPadding = PaddingValues(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            ) {
+                                items(entries.size, key = { entries[it].item.key }) { i ->
+                                    val entry = entries[i]
+                                    HomeArticleCard(
+                                        entry = entry,
+                                        index = i,
+                                        readingState = readingState,
+                                        refreshKey = readVersion,
+                                        animatedVisibilityScope = animatedVisibilityScope,
+                                        onClick = { onOpenArticle(entry.item) },
+                                    )
+                                    Spacer(Modifier.height(12.dp))
+                                }
                             }
                         }
                     }
@@ -390,8 +405,8 @@ private fun DrawerContent(
 ) {
     Column(
         Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .fillMaxWidth()
+            // ★ v1.22：去掉 verticalScroll——滚动容器会与行的点击手势竞争导致「点击不动」
             .padding(bottom = 24.dp),
     ) {
         Column(Modifier.padding(start = 28.dp, top = 16.dp, end = 20.dp, bottom = 16.dp)) {
