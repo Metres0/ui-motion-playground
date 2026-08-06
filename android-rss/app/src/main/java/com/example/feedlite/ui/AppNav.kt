@@ -115,11 +115,11 @@ fun AppNav(
                                 // ★ iOS 透明图标：靠 tint 着色，选中=品牌色，未选中=默认灰
                                 Icon(
                                     painterResource(iconRes),
-                                    contentDescription = label,
+                                    contentDescription = label, // 无障碍标签，不显示文字
                                     tint = if (selected) MaterialTheme.colorScheme.primary else LocalContentColor.current,
                                 )
                             },
-                            label = { Text(label) },
+                            label = {}, // ★ v1.31：底部导航只保留图标，去掉文字
                         )
                     }
                 }

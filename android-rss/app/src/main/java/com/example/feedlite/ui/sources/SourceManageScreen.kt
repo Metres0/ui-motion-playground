@@ -2,6 +2,7 @@ package com.example.feedlite.ui.sources
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.RssFeed
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
@@ -73,26 +75,25 @@ fun SourceManageScreen(
         enabled = store.enabledIds()
     }
 
-    Column(Modifier.fillMaxSize()) {
-        // 顶部：tab 模式仅显示小标题；二级页模式显示返回 + 标题
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.displayCutout)
-                .windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 2.dp, vertical = if (asTab) 10.dp else 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (!asTab) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            // ★ v1.31：tab 模式无返回行/标题，外层直接承担顶部安全区
+            .windowInsetsPadding(WindowInsets.displayCutout)
+            .windowInsetsPadding(WindowInsets.statusBars)
+    ) {
+        // ★ v1.31：删除「订阅源」标题；非 tab 模式才显示返回行
+        if (!asTab) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 IconButton(onClick = onBack, modifier = Modifier.size(40.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回", modifier = Modifier.size(24.dp))
                 }
             }
-            Text(
-                "订阅源",
-                style = if (asTab) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(start = if (asTab) 16.dp else 0.dp),
-            )
         }
 
         Column(
@@ -101,21 +102,40 @@ fun SourceManageScreen(
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
-            Text(
-                "点击源进入文章；开关控制是否订阅",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(if (asTab) 8.dp else 4.dp))
 
-            // 搜索
-            OutlinedTextField(
-                value = search,
-                onValueChange = { search = it },
-                placeholder = { Text("搜索源 / 分类…") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            // ★ v1.31：搜索改为下划线样式（图标 + 输入行 + 底部细线，无边框框）
+            Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.outline,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    BasicTextField(
+                        value = search,
+                        onValueChange = { search = it },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f),
+                        decorationBox = { inner ->
+                            if (search.isEmpty()) {
+                                Text(
+                                    "搜索源 / 分类…",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            inner()
+                        },
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            }
             Spacer(Modifier.height(4.dp))
 
             // 分类分组
