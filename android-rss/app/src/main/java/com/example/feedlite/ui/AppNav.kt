@@ -7,13 +7,27 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.R
 import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.ReadingStateStore
@@ -31,12 +45,12 @@ import com.example.feedlite.ui.home.HomeScreen
 import com.example.feedlite.ui.settings.SettingsScreen
 
 /**
- * 导航编排（v1.1）：
+ * 导航编排（v1.14）：
  *
- * - home                首页聚合流 + 侧边栏（源管理/设置/关于）
- * - articles/{sourceId} 单源文章列表（先 5 篇 + 加载更多）
+ * - 底部导航栏：首页 / 收藏 / 稍后再看 三个 Tab
+ * - articles/{sourceId} 单源文章列表
  * - article/{itemKey}   文章详情（共享元素 + 翻译）
- * - settings            设置（翻译 API Key）
+ * - settings            设置
  *
  * 统一转场 token：进 350ms / 出 90ms，emphasized，返回镜像。
  */
@@ -55,14 +69,50 @@ fun AppNav(
     val nav = rememberNavController()
 
     SharedTransitionLayout {
-        NavHost(
-            navController = nav,
-            startDestination = "home",
-            enterTransition = { fadeIn(MotionTokens.pageEnter()) },
-            exitTransition = { fadeOut(MotionTokens.pageExit()) },
-            popEnterTransition = { fadeIn(MotionTokens.pageEnter()) },
-            popExitTransition = { fadeOut(MotionTokens.pageExit()) },
-        ) {
+        // ★ 底部导航栏（首页 / 收藏 / 稍后再看）
+        Scaffold(
+            bottomBar = {
+                val backStack by nav.currentBackStackEntryAsState()
+                val current = backStack?.destination
+                NavigationBar {
+                    val items = listOf(
+                        Triple("home", R.drawable.ic_nav_home, "首页"),
+                        Triple("starred", R.drawable.ic_nav_star, "收藏"),
+                        Triple("later", R.drawable.ic_nav_bookmark, "稍后再看"),
+                    )
+                    items.forEach { (route, iconRes, label) ->
+                        val selected = current?.hierarchy?.any { it.route == route } == true
+                        NavigationBarItem(
+                            selected = selected,
+                            onClick = {
+                                nav.navigate(route) {
+                                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = {
+                                Icon(
+                                    painterResource(iconRes),
+                                    contentDescription = label,
+                                    tint = if (selected) Color.Unspecified else Color.Unspecified,
+                                )
+                            },
+                            label = { Text(label) },
+                        )
+                    }
+                }
+            },
+        ) { padding ->
+            NavHost(
+                modifier = Modifier.padding(padding),
+                navController = nav,
+                startDestination = "home",
+                enterTransition = { fadeIn(MotionTokens.pageEnter()) },
+                exitTransition = { fadeOut(MotionTokens.pageExit()) },
+                popEnterTransition = { fadeIn(MotionTokens.pageEnter()) },
+                popExitTransition = { fadeOut(MotionTokens.pageExit()) },
+            ) {
             composable("home") {
                 val scope = this
                 HomeScreen(
@@ -219,6 +269,7 @@ fun AppNav(
                         nav.navigate("article/${Uri.encode(item.key)}")
                     },
                 )
+            }
             }
         }
     }

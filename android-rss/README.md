@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.13**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.14**。
 
 ---
 
@@ -28,6 +28,14 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.14 更新日志
+
+1. **底部导航栏**：新增「首页 / 收藏 / 稍后再看」三个底部 Tab（Material NavigationBar），
+   一键切换三大功能区，替代此前需从侧边栏进入收藏/稍后再看的方式；
+2. **功能图标改「渐变描边」风格**：去掉之前「渐变圆底 + 白色实心符号」中小尺寸下
+   白色遮挡、显示不全的问题——改为「**细渐变描边圆环 + 渐变符号**」（home 信号波纹 /
+   star 星 / bookmark 书签 / settings 齿轮 / help 问号），线条轻盈、任意尺寸都清晰完整。
 
 ## 二、v1.13 更新日志
 
@@ -173,7 +181,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.13 / versionCode 14 |
+| 版本 | versionName 1.14 / versionCode 15 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

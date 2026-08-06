@@ -5,32 +5,45 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:pathData="M12,2 a10,10 0 1,1 0.01,0 z">
-        <aapt:attr name="android:fillColor">
+        android:pathData="M12,2.6 a9.4,9.4 0 1,1 0.01,0 z"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
             <gradient
                 android:startX="4"
-                android:startY="2"
+                android:startY="3"
                 android:endX="20"
-                android:endY="22"
+                android:endY="21"
                 android:type="linear"
                 android:startColor="#FF4D8BFF"
                 android:endColor="#FF6B5CF5" />
         </aapt:attr>
     </path>
-    <!-- 白色齿轮（简化：圆环 + 4 齿） -->
+    <!-- 渐变齿轮（填充） -->
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M12,7.5 a4.5,4.5 0 1,1 0.01,0 z" />
+        android:pathData="M12,7.6 a4.4,4.4 0 1,1 0.01,0 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="8"
+                android:startY="8"
+                android:endX="16"
+                android:endY="16"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
     <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M10.8,5.2 h2.4 v-2.0 a1.0,1.0 0 0,0 -1.0,-1.0 h-0.4 a1.0,1.0 0 0,0 -1.0,1.0 z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M10.8,18.8 h2.4 v2.0 a1.0,1.0 0 0,1 -1.0,1.0 h-0.4 a1.0,1.0 0 0,1 -1.0,-1.0 z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M5.2,10.8 h-2.0 a1.0,1.0 0 0,0 -1.0,1.0 v0.4 a1.0,1.0 0 0,0 1.0,1.0 h2.0 z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M18.8,10.8 h2.0 a1.0,1.0 0 0,1 1.0,1.0 v0.4 a1.0,1.0 0 0,1 -1.0,1.0 h-2.0 z" />
+        android:pathData="M10.9,5.4 h2.2 v-1.6 a1.0,1.0 0 0,0 -1.0,-1.0 h-0.2 a1.0,1.0 0 0,0 -1.0,1.0 z M10.9,18.6 h2.2 v1.6 a1.0,1.0 0 0,1 -1.0,1.0 h-0.2 a1.0,1.0 0 0,1 -1.0,-1.0 z M5.4,10.9 h-1.6 a1.0,1.0 0 0,0 -1.0,1.0 v0.2 a1.0,1.0 0 0,0 1.0,1.0 h1.6 z M18.6,10.9 h1.6 a1.0,1.0 0 0,1 1.0,1.0 v0.2 a1.0,1.0 0 0,1 -1.0,1.0 h-1.6 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="4"
+                android:startY="4"
+                android:endX="20"
+                android:endY="20"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
 </vector>

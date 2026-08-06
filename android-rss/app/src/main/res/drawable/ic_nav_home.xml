@@ -4,22 +4,66 @@
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <!-- 渐变圆底 -->
+    <!-- 渐变描边圆环（细） -->
     <path
-        android:pathData="M12,2 a10,10 0 1,1 0.01,0 z">
-        <aapt:attr name="android:fillColor">
+        android:pathData="M12,2.6 a9.4,9.4 0 1,1 0.01,0 z"
+        android:strokeWidth="1.2"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
             <gradient
                 android:startX="4"
-                android:startY="2"
+                android:startY="3"
                 android:endX="20"
-                android:endY="22"
+                android:endY="21"
                 android:type="linear"
                 android:startColor="#FF4D8BFF"
                 android:endColor="#FF6B5CF5" />
         </aapt:attr>
     </path>
-    <!-- RSS 信号（白色） -->
-    <path android:fillColor="#FFFFFFFF" android:pathData="M8,15 a1.6,1.6 0 1,1 0.01,0 z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M8,10.4 a5.4,5.4 0 0,1 5.4,5.4 h-1.7 a3.7,3.7 0 0,0 -3.7,-3.7 z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M8,5.8 a10,10 0 0,1 10,10 h-1.7 a8.3,8.3 0 0,0 -8.3,-8.3 z" />
+    <!-- 渐变信号点 -->
+    <path
+        android:pathData="M8.2,15.8 a1.5,1.5 0 1,1 0.01,0 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="7"
+                android:startY="14"
+                android:endX="10"
+                android:endY="17"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
+    <!-- 渐变信号内弧（描边楔形） -->
+    <path
+        android:pathData="M8.2,11.4 a4.6,4.6 0 0,1 4.6,4.6"
+        android:strokeWidth="2"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="8"
+                android:startY="11"
+                android:endX="14"
+                android:endY="17"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
+    <!-- 渐变信号外弧 -->
+    <path
+        android:pathData="M8.2,7.2 a8.8,8.8 0 0,1 8.8,8.8"
+        android:strokeWidth="2"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="8"
+                android:startY="7"
+                android:endX="18"
+                android:endY="17"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
 </vector>
