@@ -1,0 +1,28 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 品牌蓝→紫 渐变（Material You 风格） -->
+    <path android:pathData="M0,0 h108 v108 h-108 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="10"
+                android:startY="4"
+                android:endX="98"
+                android:endY="104"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
+    <!-- 玻璃光晕（右上高光） -->
+    <path
+        android:pathData="M40,16 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0 z"
+        android:fillColor="#22FFFFFF" />
+    <!-- 底部柔光 -->
+    <path
+        android:pathData="M38,84 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0 z"
+        android:fillColor="#18FFFFFF" />
+</vector>
