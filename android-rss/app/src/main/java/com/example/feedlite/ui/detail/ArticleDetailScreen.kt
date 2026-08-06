@@ -38,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -69,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.RssItem
@@ -80,11 +82,11 @@ import com.example.feedlite.ui.reader.HtmlBlocks
 import kotlin.math.roundToInt
 
 /**
- * 文章详情页（v1.4）：
- * - **译文替换原文显示**，顶部「原文/译文」切换 chips 一键切换；
- * - 正文行内链接**可点击**（ClickableText + URL annotation，点击打开浏览器）；
- * - InfoQ 等「仅链接无正文」源 → 识别为空摘要，显示引导 + 打开原文按钮；
- * - 阅读设置面板、代码块复制、正文图片渲染保留。
+ * 文章详情页（v1.5）：
+ * - **全文抓取**：feed 只有摘要时，进入自动抓原始网页正文并应用内渲染（readability-lite）；
+ * - **译文替换原文** +「原文/译文」chips 一键切换；
+ * - **「查看全文」按钮**：正文区底部始终可点击跳转浏览器（抓取失败时的兜底）；
+ * - 行内链接可点击、代码块复制、正文图片、阅读设置面板保留。
  */
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -92,6 +94,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
     itemKey: String,
     translator: Translator,
     store: TranslationStore,
+    fetcher: ArticleFetcher,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
 ) {
@@ -104,11 +107,12 @@ fun SharedTransitionScope.ArticleDetailScreen(
 
     val viewModel: ArticleDetailViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { ArticleDetailViewModel(itemKey, translator, store) }
+            initializer { ArticleDetailViewModel(itemKey, translator, store, fetcher) }
         }
     )
     val translation by viewModel.translation.collectAsState()
     val showTranslation by viewModel.showTranslation.collectAsState()
+    val fullText by viewModel.fullText.collectAsState()
 
     val bodyFont = when (reading.fontFamily) {
         ReadingSettings.FONT_SERIF -> FontFamily.Serif
@@ -160,6 +164,14 @@ fun SharedTransitionScope.ArticleDetailScreen(
 
         val blocks = remember(item.descriptionHtml) { HtmlBlocks.parse(item.descriptionHtml) }
         val hasContent = remember(item.descriptionHtml) { HtmlText.hasMeaningfulContent(item.descriptionHtml) }
+
+        // ★ v1.5：全文抓取结果优先渲染
+        val fullTextBlocks = remember(fullText) {
+            (fullText as? FullTextUiState.Done)?.let { HtmlBlocks.parse(it.html) } ?: emptyList()
+        }
+        val showFullText = fullText is FullTextUiState.Done && fullTextBlocks.isNotEmpty()
+        val effectiveBlocks = if (showFullText) fullTextBlocks else blocks
+        val bodyText = HtmlText.toPlainText(item.descriptionHtml)
 
         Column(
             modifier = Modifier
@@ -213,7 +225,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                     Spacer(Modifier.height(12.dp))
                 }
 
-                // ── 正文区域（译文替换原文） ───────────────
+                // ── 正文区域（全文抓取优先 / 译文替换原文） ──
                 if (showTranslation && translation is TranslationUiState.Done) {
                     // 译文替换原文显示
                     val translatedText = (translation as TranslationUiState.Done).text
@@ -225,47 +237,61 @@ fun SharedTransitionScope.ArticleDetailScreen(
                             )
                         }
                     }
-                } else if (!hasContent) {
-                    // InfoQ 等仅链接源：引导打开原文
-                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
-                        Text(
-                            "该源未提供正文摘要",
-                            style = bodyStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = {
-                                if (item.link.isNotBlank()) {
-                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.link)))
-                                }
-                            },
-                        ) {
-                            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("打开原文链接")
-                        }
-                    }
-                } else if (blocks.isEmpty()) {
-                    Text(
-                        "（该源未提供正文摘要）",
-                        style = bodyStyle,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                 } else {
-                    val primary = MaterialTheme.colorScheme.primary
-                    SelectionContainer {
-                        Column {
-                            blocks.forEach { block ->
-                                BlockView(
-                                    block = block,
-                                    bodyStyle = bodyStyle,
-                                    primaryColor = primary,
-                                    context = context,
-                                )
-                                Spacer(Modifier.height(12.dp))
+                    when (fullText) {
+                        is FullTextUiState.Loading -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+                                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text("正在加载全文…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
+                        is FullTextUiState.Fail -> {
+                            // 全文抓取失败：回退显示摘要
+                            if (hasContent && bodyText.length >= 20) {
+                                RenderBlocks(effectiveBlocks, bodyStyle, context)
+                            } else {
+                                Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                                    Text(
+                                        "该源仅提供标题摘要，正文请查看原文",
+                                        style = bodyStyle,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                        is FullTextUiState.Done -> {
+                            if (effectiveBlocks.isNotEmpty()) {
+                                RenderBlocks(effectiveBlocks, bodyStyle, context)
+                            }
+                        }
+                        FullTextUiState.Idle -> {
+                            // 摘要本身足够长：直接渲染 feed 摘要
+                            if (hasContent && effectiveBlocks.isNotEmpty()) {
+                                RenderBlocks(effectiveBlocks, bodyStyle, context)
+                            } else {
+                                Text(
+                                    "（该源未提供正文摘要）",
+                                    style = bodyStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // ★ 「查看全文」：跳转原始网站（全文抓取成功也保留）
+                if (item.link.isNotBlank()) {
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.link)))
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("查看全文")
                     }
                 }
 
@@ -320,6 +346,29 @@ fun SharedTransitionScope.ArticleDetailScreen(
             },
             onDismiss = { showReadingPanel = false },
         )
+    }
+}
+
+/** 渲染一组排版块（链接可点击）。 */
+@Composable
+private fun RenderBlocks(
+    blocks: List<HtmlBlocks.Block>,
+    bodyStyle: TextStyle,
+    context: android.content.Context,
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    SelectionContainer {
+        Column {
+            blocks.forEach { block ->
+                BlockView(
+                    block = block,
+                    bodyStyle = bodyStyle,
+                    primaryColor = primary,
+                    context = context,
+                )
+                Spacer(Modifier.height(12.dp))
+            }
+        }
     }
 }
 

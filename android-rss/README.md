@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.4**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.5**。
 
 ---
 
@@ -21,10 +21,22 @@
 | **正文图片** | 正文内的图片真实渲染（不再是占位文本），详情页大图 1280px 解码 |
 | **阅读设置（文章内）** | 详情页「A」按钮 → 底部面板调字号/行高/字体，即时生效并持久化 |
 | **增量更新** | 文章本地持久化，进入秒开；超过设定间隔才自动增量抓取（只加新文章）；可设手动/6h/12h/24h/48h |
+| **全文抓取** | feed 只有摘要的源（少数派等）进入文章自动抓原始网页正文并应用内渲染（readability-lite） |
+| **查看全文** | 正文区底部「查看全文」按钮一键跳转原始网站（全文抓取失败时的兜底） |
 | **AI 翻译** | **译文替换原文显示，一键切换原文/译文**；代码块不参与翻译；设置页带「测试连接」 |
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.5 更新日志
+
+1. **应用内全文抓取**：新增 `ArticleFetcher`（readability-lite）——当 feed 正文过短
+   （少数派等仅摘要源）时，进入文章自动抓取原始网页，按候选容器（`article-body` /
+   `article-content` / `post-content` / `entry-content` / `markdown-body` / `rich_media_content` /
+   `topic_content` / `<article>` / `<main>`）定位正文，div 配对截取并清理噪音，**应用内直接渲染全文**；
+2. **「查看全文」按钮**：正文区底部固定显示，一键跳转原始网站；全文抓取失败时
+   自动回退到该按钮（并可重试加载全文）；
+3. **翻译增强**：全文抓取成功时优先翻译全文而非摘要。
 
 ## 二、v1.4 更新日志
 
@@ -74,7 +86,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.4 / versionCode 5 |
+| 版本 | versionName 1.5 / versionCode 6 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

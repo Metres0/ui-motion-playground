@@ -14,6 +14,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.feedlite.MotionTokens
+import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
@@ -43,6 +44,7 @@ fun AppNav(
     translator: Translator,
     translationStore: TranslationStore,
     updateSettings: UpdateSettings,
+    fetcher: ArticleFetcher,
 ) {
     val nav = rememberNavController()
 
@@ -125,6 +127,7 @@ fun AppNav(
                     itemKey = itemKey,
                     translator = translator,
                     store = translationStore,
+                    fetcher = fetcher,
                     animatedVisibilityScope = scope,
                     onBack = { nav.popBackStack() },
                 )
