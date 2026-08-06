@@ -13,58 +13,37 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bookmarks
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.RssFeed
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -75,9 +54,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
-import androidx.compose.material.icons.filled.Star
-import com.example.feedlite.data.FeedCategory
-import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
@@ -88,11 +64,13 @@ import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.components.ProgressiveImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
 /**
- * 首页 = 聚合文章流（按分类分段）+ 侧边栏（分类分组的源管理 / 设置 / 关于 / 转源帮助）。
+ * 首页聚合流（v1.23）：
+ * - **无侧边栏**：订阅管理 / 设置 / 帮助 等全部移入「设置」页（底部栏 Tab）
+ * - 顶部无任何图标，纯内容区（状态栏安全区处理）
+ * - 下拉刷新、滚动隐藏底部栏、未读圆点、共享元素转场保留
  */
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -102,31 +80,26 @@ fun SharedTransitionScope.HomeScreen(
     updateSettings: UpdateSettings,
     readingState: ReadingStateStore,
     animatedVisibilityScope: AnimatedVisibilityScope,
-    onOpenSource: (FeedSource) -> Unit,
     onOpenArticle: (RssItem) -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenStarred: () -> Unit,
-    onOpenLater: () -> Unit,
-    onScrollVisibilityChange: (Boolean) -> Unit, // ★ 首页下拉时隐藏底部栏
+    refreshTick: Int, // ★ 设置页改订阅后返回首页时触发刷新
+    onScrollVisibilityChange: (Boolean) -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { HomeViewModel(repository, store, updateSettings) }
-        }
+        factory = viewModelFactory { initializer { HomeViewModel(repository, store, updateSettings) } }
     )
     val state by viewModel.state.collectAsState()
-    val sources by viewModel.sources.collectAsState()
-    val enabled by viewModel.enabled.collectAsState()
-    val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
+    val readVersion by readingState.version.collectAsState()
 
-    // ★ v1.22：下拉刷新状态（顶栏刷新按钮已移除）
+    // ★ 设置页改订阅后刷新首页
+    LaunchedEffect(refreshTick) { if (refreshTick > 0) viewModel.load() }
+
+    // ★ v1.22：下拉刷新状态
     var isRefreshing by remember { mutableStateOf(false) }
     LaunchedEffect(state) {
-        val updating = (state as? HomeUiState.Success)?.updating == true
-        if (!updating) isRefreshing = false
+        if ((state as? HomeUiState.Success)?.updating != true) isRefreshing = false
     }
 
-    // ★ 滚动方向监听（v1.22 节流版）：只在「方向切换」或「回到顶部」时通知，避免状态风暴
+    // ★ 滚动方向监听（节流）：只在方向切换/回顶时通知，避免底部栏状态风暴
     val listState = rememberLazyListState()
     LaunchedEffect(listState) {
         var lastIndex = listState.firstVisibleItemIndex
@@ -147,151 +120,78 @@ fun SharedTransitionScope.HomeScreen(
             }
     }
 
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val coroutineScope = rememberCoroutineScope()
-    var showAddDialog by remember { mutableStateOf(false) }
-    var showAbout by remember { mutableStateOf(false) }
-    var showConvertHelp by remember { mutableStateOf(false) }
-
-    fun closeDrawer() {
-        coroutineScope.launch { drawerState.close() }
-    }
-
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                DrawerContent(
-                    sources = sources,
-                    enabled = enabled,
-                    onToggle = { id, on -> viewModel.toggleSource(id, on) },
-                    onOpenSource = { src ->
-                        closeDrawer()
-                        onOpenSource(src)
-                    },
-                    onAdd = { showAddDialog = true },
-                    onDelete = viewModel::removeCustom,
-                    onOpenSettings = {
-                        closeDrawer()
-                        onOpenSettings()
-                    },
-                    onOpenStarred = {
-                        closeDrawer()
-                        onOpenStarred()
-                    },
-                    onOpenLater = {
-                        closeDrawer()
-                        onOpenLater()
-                    },
-                    onAbout = { showAbout = true },
-                    onConvertHelp = { showConvertHelp = true },
-                )
-            }
-        },
+    // ★ 顶部纯内容（状态栏安全区），无菜单/刷新图标
+    Box(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
     ) {
-        // ★ 顶栏空间压到最小：浮动图标行 + 内容紧贴（AppNav 的 Scaffold 已处理状态栏 inset）
-        Box(Modifier.fillMaxSize()) {
-            // 浮动图标：仅一行、14dp 图标，几乎不占高度
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.TopStart)
-                    .padding(horizontal = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
+        when (val s = state) {
+            HomeUiState.Loading -> Column(
+                Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                IconButton(
-                    onClick = { coroutineScope.launch { drawerState.open() } },
-                    modifier = Modifier.size(44.dp),
-                ) {
-                    Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(28.dp))
-                }
-                // ★ v1.22：刷新按钮已移除，改为列表下拉刷新
+                CircularProgressIndicator()
+                Spacer(Modifier.height(12.dp))
+                Text("正在聚合订阅源…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
-            when (val s = state) {
-                HomeUiState.Loading -> Column(
-                    Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    CircularProgressIndicator()
-                    Spacer(Modifier.height(12.dp))
-                    Text("正在聚合订阅源…", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-
-                is HomeUiState.Success -> {
-                    if (s.entries.isEmpty()) {
-                        Column(
-                            Modifier.fillMaxSize().padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                        ) {
-                            Image(
-                                painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                            )
-                            Spacer(Modifier.height(12.dp))
-                            Text(
-                                text = if (s.enabledCount == 0) "还没有启用任何订阅源\n打开左侧菜单勾选感兴趣的源"
-                                else "订阅源抓取失败，请检查网络\n（成功 ${s.loadedCount}/${s.enabledCount}）",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            Spacer(Modifier.height(16.dp))
-                            Button(onClick = viewModel::refresh) { Text("重试") }
-                        }
-                    } else {
-                        // ★ v1.19：去掉分类标题行，全部文章直接铺开（顶部空间让给内容/侧边栏）
-                        // ★ v1.22：列表包 PullToRefreshBox，下拉即刷新
-                        val entries = s.entries
-                        PullToRefreshBox(
-                            isRefreshing = isRefreshing,
-                            onRefresh = {
-                                isRefreshing = true
-                                viewModel.refresh()
-                                onScrollVisibilityChange(true) // 下拉刷新时恢复底栏
-                            },
+            is HomeUiState.Success -> {
+                if (s.entries.isEmpty()) {
+                    Column(
+                        Modifier.fillMaxSize().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Image(
+                            painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = if (s.enabledCount == 0) "还没有启用任何订阅源\n到底部「设置」页勾选感兴趣的源"
+                            else "订阅源抓取失败，请检查网络\n（成功 ${s.loadedCount}/${s.enabledCount}）",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Button(onClick = viewModel::refresh) { Text("重试") }
+                    }
+                } else {
+                    // ★ 下拉刷新
+                    PullToRefreshBox(
+                        isRefreshing = isRefreshing,
+                        onRefresh = {
+                            isRefreshing = true
+                            viewModel.refresh()
+                            onScrollVisibilityChange(true)
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize(),
-                                // ★ 顶部留图标行 + 呼吸间距
-                                contentPadding = PaddingValues(top = 48.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
-                            ) {
-                                items(entries.size, key = { entries[it].item.key }) { i ->
-                                    val entry = entries[i]
-                                    HomeArticleCard(
-                                        entry = entry,
-                                        index = i,
-                                        readingState = readingState,
-                                        refreshKey = readVersion,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        onClick = { onOpenArticle(entry.item) },
-                                    )
-                                    Spacer(Modifier.height(12.dp))
-                                }
+                            items(s.entries.size, key = { s.entries[it].item.key }) { i ->
+                                val entry = s.entries[i]
+                                HomeArticleCard(
+                                    entry = entry,
+                                    index = i,
+                                    readingState = readingState,
+                                    refreshKey = readVersion,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    onClick = { onOpenArticle(entry.item) },
+                                )
+                                Spacer(Modifier.height(12.dp))
                             }
                         }
                     }
                 }
             }
         }
-    }
-
-    if (showAddDialog) {
-        AddSourceDialog(
-            onConfirm = { title, url -> viewModel.addCustom(title, url) },
-            onShowConvertHelp = { showConvertHelp = true },
-            onDismiss = { showAddDialog = false },
-        )
-    }
-    if (showAbout) {
-        AboutDialog(onDismiss = { showAbout = false })
-    }
-    if (showConvertHelp) {
-        ConvertHelpDialog(onDismiss = { showConvertHelp = false })
     }
 }
 
@@ -386,301 +286,4 @@ private fun SharedTransitionScope.HomeArticleCard(
             }
         }
     }
-}
-
-/** 侧边栏：订阅源（按分类分组）+ 添加源 + 设置 + 关于。 */
-@Composable
-private fun DrawerContent(
-    sources: List<FeedSource>,
-    enabled: Set<String>,
-    onToggle: (String, Boolean) -> Unit,
-    onOpenSource: (FeedSource) -> Unit,
-    onAdd: () -> Unit,
-    onDelete: (String) -> Unit,
-    onOpenSettings: () -> Unit,
-    onOpenStarred: () -> Unit,
-    onOpenLater: () -> Unit,
-    onAbout: () -> Unit,
-    onConvertHelp: () -> Unit,
-) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            // ★ v1.22：去掉 verticalScroll——滚动容器会与行的点击手势竞争导致「点击不动」
-            .padding(bottom = 24.dp),
-    ) {
-        Column(Modifier.padding(start = 28.dp, top = 16.dp, end = 20.dp, bottom = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text("轻阅 RSS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            }
-            Text(
-                "订阅源 · ${enabled.size}/${sources.size} 已启用",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        HorizontalDivider()
-
-        // ★ 源搜索框（v1.10）
-        var search by remember { mutableStateOf("") }
-        OutlinedTextField(
-            value = search,
-            onValueChange = { search = it },
-            placeholder = { Text("搜索源 / 分类…") },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 28.dp, end = 16.dp, top = 4.dp, bottom = 4.dp),
-        )
-
-        // ★ 按分类分组展示（支持搜索过滤）
-        val kw = search.trim()
-        FeedCategory.ORDER.forEach { cat ->
-            val list = sources.filter { it.category == cat }.filter {
-                kw.isEmpty() || it.title.contains(kw, true) || it.description.contains(kw, true) || cat.contains(kw, true)
-            }
-            if (list.isNotEmpty()) {
-                Text(
-                    cat,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = 28.dp, top = 12.dp, bottom = 4.dp),
-                )
-                list.forEach { source ->
-                    DrawerSourceRow(
-                        source = source,
-                        checked = source.id in enabled,
-                        onToggle = { onToggle(source.id, it) },
-                        onClick = { onOpenSource(source) },
-                        onDelete = { onDelete(source.id) },
-                    )
-                }
-            }
-        }
-
-        // ★ v1.21：统一对齐行——图标 26dp 贴左缘(x=2)，文本起点=28dp 与文章标题对齐
-        DrawerNavItem(
-            label = "添加订阅源",
-            icon = { Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(26.dp)) },
-            onClick = onAdd,
-        )
-        DrawerNavItem(
-            label = "公众号 / 微博转源帮助",
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            onClick = onConvertHelp,
-        )
-
-        HorizontalDivider(Modifier.padding(vertical = 12.dp))
-
-        // ★ 我的收藏
-        DrawerNavItem(
-            label = "我的收藏",
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            onClick = onOpenStarred,
-        )
-        // ★ 稍后再看
-        DrawerNavItem(
-            label = "稍后再看",
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            onClick = onOpenLater,
-        )
-        DrawerNavItem(
-            label = "设置",
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            onClick = onOpenSettings,
-        )
-        DrawerNavItem(
-            label = "关于",
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
-            onClick = onAbout,
-        )
-    }
-}
-
-/** ★ 抽屉对齐行：图标 26dp 贴左缘，文本从 28dp 开始（与首页文章标题对齐）。 */
-@Composable
-private fun DrawerNavItem(
-    label: String,
-    icon: @Composable () -> Unit,
-    onClick: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(start = 2.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        icon()
-        Text(
-            label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/** 抽屉单源行：点击进入，Switch 管理启用，自定义源可删除。 */
-@Composable
-private fun DrawerSourceRow(
-    source: FeedSource,
-    checked: Boolean,
-    onToggle: (Boolean) -> Unit,
-    onClick: () -> Unit,
-    onDelete: () -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            // ★ v1.21：徽章 26dp 贴左缘(x=2)，源名文本起点=28dp 与文章标题对齐
-            .padding(start = 2.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(
-            modifier = Modifier
-                .size(26.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = source.initial,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Column(Modifier.weight(1f)) {
-            Text(source.title, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        if (source.id.startsWith("custom_")) {
-            IconButton(onClick = onDelete, modifier = Modifier.size(36.dp)) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = "删除 ${source.title}",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-        }
-        Switch(checked = checked, onCheckedChange = onToggle)
-    }
-}
-
-/** 添加订阅源对话框。 */
-@Composable
-private fun AddSourceDialog(
-    onConfirm: (String, String) -> Unit,
-    onShowConvertHelp: () -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var title by remember { mutableStateOf("") }
-    var url by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.RssFeed, contentDescription = null) },
-        title = { Text("添加 RSS 源") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text("名称（如：我的博客）") },
-                    singleLine = true,
-                )
-                OutlinedTextField(
-                    value = url,
-                    onValueChange = { url = it },
-                    label = { Text("Feed 地址（如：example.com/feed）") },
-                    singleLine = true,
-                )
-                TextButton(onClick = onShowConvertHelp) {
-                    Icon(Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("公众号 / 微博怎么转成 RSS？", style = MaterialTheme.typography.labelMedium)
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = title.isNotBlank() && url.isNotBlank(),
-                onClick = {
-                    onConfirm(title.trim(), url.trim())
-                    onDismiss()
-                },
-            ) { Text("添加") }
-        },
-        dismissButton = {
-            IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, contentDescription = "取消") }
-        },
-    )
-}
-
-/** 转源帮助对话框：公众号 / 微博 → RSS 的路径。 */
-@Composable
-private fun ConvertHelpDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
-        title = { Text("公众号 / 微博 转 RSS") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("微信公众号", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "1. 自建 Wechat2RSS（wechat2rss.xlab.app，需一台服务器）；\n" +
-                        "2. 或使用 RSSHub 的 /wechat/ 相关路由；\n" +
-                        "3. 得到 feed 地址后，通过「添加订阅源」填入即可。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                HorizontalDivider()
-                Text("微博", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "1. 使用 RSSHub 路由 /weibo/user/{uid}；\n" +
-                        "2. uid 为微博用户数字 ID（可在个人主页 URL 中查看）；\n" +
-                        "3. 公共实例可能限流，建议自建 RSSHub（github.com/DIYgod/RSSHub）。",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) { Text("知道了") }
-        },
-    )
-}
-
-/** 关于对话框。 */
-@Composable
-private fun AboutDialog(onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Image(
-                painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-            )
-        },
-        title = { Text("轻阅 RSS v1.2") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("极简 RSS 阅读器 · 基于 Android 16")
-                Text("内置 13 个订阅源（技术/AI/Go/商业/国际分类）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("富文本排版 · 阅读设置 · AI 翻译（代码块保留原文）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-        confirmButton = {
-            Button(onClick = onDismiss) { Text("好的") }
-        },
-    )
 }

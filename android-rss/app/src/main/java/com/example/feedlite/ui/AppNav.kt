@@ -74,6 +74,8 @@ fun AppNav(
     val nav = rememberNavController()
     // ★ 首页下拉时隐藏底部栏（仅首页滚动触发）
     var showHomeBar by remember { mutableStateOf(true) }
+    // ★ v1.23：设置页改订阅后，返回首页触发刷新
+    var homeRefreshTick by remember { mutableStateOf(0) }
 
     SharedTransitionLayout {
         // ★ 底部导航栏（首页 / 收藏 / 稍后再看 / 设置）
@@ -135,16 +137,11 @@ fun AppNav(
                     updateSettings = updateSettings,
                     readingState = readingState,
                     animatedVisibilityScope = scope,
-                    onOpenSource = { source: FeedSource ->
-                        nav.navigate("articles/${Uri.encode(source.id)}")
-                    },
                     onOpenArticle = { item ->
                         ArticleCache.put(item.key, item)
                         nav.navigate("article/${Uri.encode(item.key)}")
                     },
-                    onOpenSettings = { nav.navigate("settings") },
-                    onOpenStarred = { nav.navigate("starred") },
-                    onOpenLater = { nav.navigate("later") },
+                    refreshTick = homeRefreshTick,
                     onScrollVisibilityChange = { visible -> showHomeBar = visible },
                 )
             }
@@ -230,6 +227,10 @@ fun AppNav(
                     themeSettings = themeSettings,
                     subscriptionStore = store,
                     readingState = readingState,
+                    onOpenSource = { source: FeedSource ->
+                        nav.navigate("articles/${Uri.encode(source.id)}")
+                    },
+                    onSubscriptionChanged = { homeRefreshTick++ },
                     onBack = { nav.popBackStack() },
                 )
             }
