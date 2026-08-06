@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Translate
@@ -209,6 +210,19 @@ fun SharedTransitionScope.ArticleDetailScreen(
                             contentDescription = if (later) "移出稍后再看" else "稍后再看",
                             tint = if (later) MaterialTheme.colorScheme.primary else Color.Unspecified,
                         )
+                    }
+                    // ★ v1.25：分享文章
+                    if (item != null) {
+                        IconButton(onClick = {
+                            val share = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_SUBJECT, item.title)
+                                putExtra(Intent.EXTRA_TEXT, "${item.title}\n${item.link}")
+                            }
+                            context.startActivity(Intent.createChooser(share, "分享文章"))
+                        }) {
+                            Icon(Icons.Default.Share, contentDescription = "分享")
+                        }
                     }
                     IconButton(onClick = { viewModel.translate() }) {
                         Icon(Icons.Default.Translate, contentDescription = "翻译全文")

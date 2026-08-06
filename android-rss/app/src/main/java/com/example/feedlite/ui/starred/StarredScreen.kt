@@ -31,6 +31,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -95,23 +96,8 @@ fun SharedTransitionScope.StarredScreen(
         }
     }
 
-    // ★ v1.19：浮动图标行（无 TopAppBar 大标题，底部栏已提供 Tab 语义）
+    // ★ v1.19 起：无顶栏；v1.25 导出按钮移到列表底部，顶部不再放图标
     Box(Modifier.fillMaxSize()) {
-        // 浮动行：右上「导出」图标
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopEnd)
-                .padding(end = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = { exportLauncher.launch("feedlite_favorites.json") },
-                modifier = Modifier.size(44.dp),
-            ) {
-                Icon(Icons.Default.Share, contentDescription = "导出收藏", modifier = Modifier.size(26.dp))
-            }
-        }
         if (items.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -184,6 +170,19 @@ fun SharedTransitionScope.StarredScreen(
                                 )
                             }
                         }
+                    }
+                }
+                // ★ v1.25：导出按钮移到列表底部
+                item {
+                    OutlinedButton(
+                        onClick = { exportLauncher.launch("feedlite_favorites.json") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("导出收藏为 JSON")
                     }
                 }
             }

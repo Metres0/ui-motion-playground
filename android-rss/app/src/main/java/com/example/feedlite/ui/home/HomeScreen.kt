@@ -27,10 +27,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -99,6 +106,11 @@ fun SharedTransitionScope.HomeScreen(
         if ((state as? HomeUiState.Success)?.updating != true) isRefreshing = false
     }
 
+    // ★ v1.25：搜索 + 只看未读
+    var searchQuery by remember { mutableStateOf("") }
+    var showSearch by remember { mutableStateOf(false) }
+    var unreadOnly by remember { mutableStateOf(false) }
+
     // ★ 滚动方向监听（节流）：只在方向切换/回顶时通知，避免底部栏状态风暴
     val listState = rememberLazyListState()
     LaunchedEffect(listState) {
@@ -120,12 +132,57 @@ fun SharedTransitionScope.HomeScreen(
             }
     }
 
-    // ★ 顶部纯内容（状态栏安全区），无菜单/刷新图标
+    // ★ 顶部纯内容（状态栏安全区）
     Box(
         Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.statusBars)
     ) {
+        // ★ v1.25：右上浮动搜索图标（点击展开搜索栏）
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopEnd)
+                .padding(end = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!showSearch) {
+                IconButton(
+                    onClick = { showSearch = true },
+                    modifier = Modifier.size(40.dp),
+                ) {
+                    Icon(Icons.Default.Search, contentDescription = "搜索", modifier = Modifier.size(24.dp))
+                }
+            }
+        }
+        // ★ v1.25：搜索栏（展开时）
+        if (showSearch) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopStart)
+                    .padding(horizontal = 12.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    placeholder = { Text("搜索文章…") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(8.dp))
+                FilterChip(
+                    selected = unreadOnly,
+                    onClick = { unreadOnly = !unreadOnly },
+                    label = { Text("只看未读") },
+                )
+                IconButton(onClick = { showSearch = false; searchQuery = "" }) {
+                    Icon(Icons.Default.Close, contentDescription = "关闭搜索", modifier = Modifier.size(22.dp))
+                }
+            }
+        }
+
         when (val s = state) {
             HomeUiState.Loading -> Column(
                 Modifier.fillMaxSize(),
@@ -160,6 +217,16 @@ fun SharedTransitionScope.HomeScreen(
                         Button(onClick = viewModel::refresh) { Text("重试") }
                     }
                 } else {
+                    // ★ v1.25：搜索 + 只看未读 过滤
+                    val kw = searchQuery.trim()
+                    val filtered = s.entries.filter { entry ->
+                        val matchText = kw.isEmpty() ||
+                            entry.item.title.contains(kw, true) ||
+                            entry.source.title.contains(kw, true) ||
+                            entry.item.descriptionHtml.contains(kw, true)
+                        val matchRead = !unreadOnly || !readingState.isRead(entry.item.key)
+                        matchText && matchRead
+                    }
                     // ★ 下拉刷新
                     PullToRefreshBox(
                         isRefreshing = isRefreshing,
@@ -173,10 +240,23 @@ fun SharedTransitionScope.HomeScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            contentPadding = PaddingValues(
+                                top = if (showSearch) 64.dp else 8.dp,
+                                start = 16.dp, end = 16.dp, bottom = 16.dp,
+                            ),
                         ) {
-                            items(s.entries.size, key = { s.entries[it].item.key }) { i ->
-                                val entry = s.entries[i]
+                            if (filtered.isEmpty() && (kw.isNotEmpty() || unreadOnly)) {
+                                item {
+                                    Text(
+                                        "没有匹配的文章",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(vertical = 24.dp),
+                                    )
+                                }
+                            }
+                            items(filtered.size, key = { filtered[it].item.key }) { i ->
+                                val entry = filtered[i]
                                 HomeArticleCard(
                                     entry = entry,
                                     index = i,

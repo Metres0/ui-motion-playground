@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.IosShare
@@ -51,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.feedlite.data.CacheManager
 import com.example.feedlite.data.Opml
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.ReadingStateStore
@@ -132,17 +137,13 @@ fun SettingsScreen(
         }
     }
 
-    // ★ v1.19：浮动行 + 小标题（无 TopAppBar 大标题，底部栏已提供 Tab 语义）
+    // ★ v1.25：去掉「设置」大标题，顶部直接从状态栏下方开始（空间留给内容）
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
             .verticalScroll(rememberScrollState()),
     ) {
-        Text(
-            "设置",
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(start = 16.dp, top = 26.dp),
-        )
         Column(Modifier.padding(16.dp)) {
 
             // ════════ 订阅源（二级页入口） ════════
@@ -446,6 +447,23 @@ fun SettingsScreen(
             importMsg?.let { msg ->
                 Spacer(Modifier.height(8.dp))
                 Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+
+            // ★ v1.25：缓存管理
+            Spacer(Modifier.height(16.dp))
+            val cacheManager = remember { CacheManager(context) }
+            var cacheSize by remember { mutableStateOf(cacheManager.sizeText()) }
+            OutlinedButton(
+                onClick = {
+                    cacheManager.clear()
+                    cacheSize = cacheManager.sizeText()
+                    android.widget.Toast.makeText(context, "缓存已清理", android.widget.Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("清理离线缓存（$cacheSize）")
             }
 
             Spacer(Modifier.height(16.dp))
