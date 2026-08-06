@@ -7,6 +7,7 @@ import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -80,7 +81,10 @@ fun AppNav(
 
     SharedTransitionLayout {
         // ★ 底部导航栏（首页 / 收藏 / 稍后再看 / 设置）
+        // ★ v1.27：contentWindowInsets=0 去掉 Scaffold 默认状态栏 padding，
+        //   避免与各页面自身的 windowInsetsPadding(statusBars) 叠加成双倍顶部空白
         Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             bottomBar = {
                 val backStack by nav.currentBackStackEntryAsState()
                 val current = backStack?.destination

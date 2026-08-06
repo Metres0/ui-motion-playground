@@ -173,7 +173,7 @@ fun SharedTransitionScope.HomeScreen(
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 8.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
+                            contentPadding = PaddingValues(top = 2.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
                             items(s.entries.size, key = { s.entries[it].item.key }) { i ->
                                 val entry = s.entries[i]

@@ -49,6 +49,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -97,7 +100,12 @@ fun SharedTransitionScope.StarredScreen(
     }
 
     // ★ v1.19 起：无顶栏；v1.25 导出按钮移到列表底部，顶部不再放图标
-    Box(Modifier.fillMaxSize()) {
+    // ★ v1.27：AppNav Scaffold 不再推状态栏 inset，这里自己处理一次
+    Box(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.statusBars)
+    ) {
         if (items.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
