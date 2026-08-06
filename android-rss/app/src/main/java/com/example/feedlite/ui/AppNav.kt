@@ -16,11 +16,13 @@ import androidx.navigation.navArgument
 import com.example.feedlite.MotionTokens
 import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.FeedSource
+import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.UpdateSettings
+import com.example.feedlite.ui.starred.StarredScreen
 import com.example.feedlite.ui.articles.ArticleListScreen
 import com.example.feedlite.ui.detail.ArticleDetailScreen
 import com.example.feedlite.ui.home.HomeScreen
@@ -45,6 +47,7 @@ fun AppNav(
     translationStore: TranslationStore,
     updateSettings: UpdateSettings,
     fetcher: ArticleFetcher,
+    readingState: ReadingStateStore,
 ) {
     val nav = rememberNavController()
 
@@ -63,6 +66,7 @@ fun AppNav(
                     repository = repository,
                     store = store,
                     updateSettings = updateSettings,
+                    readingState = readingState,
                     animatedVisibilityScope = scope,
                     onOpenSource = { source: FeedSource ->
                         nav.navigate("articles/${Uri.encode(source.id)}")
@@ -72,6 +76,7 @@ fun AppNav(
                         nav.navigate("article/${Uri.encode(item.key)}")
                     },
                     onOpenSettings = { nav.navigate("settings") },
+                    onOpenStarred = { nav.navigate("starred") },
                 )
             }
             composable(
@@ -97,6 +102,7 @@ fun AppNav(
                     repository = repository,
                     store = store,
                     updateSettings = updateSettings,
+                    readingState = readingState,
                     animatedVisibilityScope = scope,
                     onBack = { nav.popBackStack() },
                     onOpenArticle = { item ->
@@ -128,6 +134,7 @@ fun AppNav(
                     translator = translator,
                     store = translationStore,
                     fetcher = fetcher,
+                    readingState = readingState,
                     animatedVisibilityScope = scope,
                     onBack = { nav.popBackStack() },
                 )
@@ -152,6 +159,32 @@ fun AppNav(
                     translator = translator,
                     updateSettings = updateSettings,
                     onBack = { nav.popBackStack() },
+                )
+            }
+            composable(
+                route = "starred",
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeIn(MotionTokens.pageEnter())
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeOut(MotionTokens.pageExit())
+                },
+            ) {
+                val scope = this
+                StarredScreen(
+                    readingState = readingState,
+                    animatedVisibilityScope = scope,
+                    onBack = { nav.popBackStack() },
+                    onOpenArticle = { item ->
+                        ArticleCache.put(item.key, item)
+                        nav.navigate("article/${Uri.encode(item.key)}")
+                    },
                 )
             }
         }

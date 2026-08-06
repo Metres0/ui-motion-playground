@@ -45,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +53,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
 import com.example.feedlite.data.HtmlText
+import androidx.compose.foundation.shape.CircleShape
+import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
@@ -76,6 +79,7 @@ fun SharedTransitionScope.ArticleListScreen(
     repository: RssRepository,
     store: SubscriptionStore,
     updateSettings: UpdateSettings,
+    readingState: ReadingStateStore,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
     onOpenArticle: (RssItem) -> Unit,
@@ -135,6 +139,7 @@ fun SharedTransitionScope.ArticleListScreen(
                         ArticleCard(
                             item = item,
                             index = i,
+                            isRead = readingState.isRead(item.key),
                             animatedVisibilityScope = animatedVisibilityScope,
                             onClick = { onOpenArticle(item) },
                         )
@@ -165,6 +170,7 @@ fun SharedTransitionScope.ArticleListScreen(
 fun SharedTransitionScope.ArticleCard(
     item: RssItem,
     index: Int,
+    isRead: Boolean,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
@@ -202,7 +208,25 @@ fun SharedTransitionScope.ArticleCard(
         )
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
-            Text(item.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!isRead) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                }
+                Text(
+                    item.title,
+                    style = if (isRead) MaterialTheme.typography.titleMedium
+                    else MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = if (isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             // ★ 过滤「点击查看原文」噪音
             if (HtmlText.hasMeaningfulContent(item.descriptionHtml)) {
                 Spacer(Modifier.height(2.dp))

@@ -9,6 +9,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.example.feedlite.data.ArticleFetcher
+import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
 import com.example.feedlite.data.TranslationStore
@@ -28,6 +29,7 @@ class MainActivity : ComponentActivity() {
         val translator = Translator(translationStore)
         val updateSettings = UpdateSettings(applicationContext)
         val fetcher = ArticleFetcher()
+        val readingState = ReadingStateStore(applicationContext)
 
         setContent {
             FeedLiteTheme {
@@ -42,6 +44,7 @@ class MainActivity : ComponentActivity() {
                         translationStore = translationStore,
                         updateSettings = updateSettings,
                         fetcher = fetcher,
+                        readingState = readingState,
                     )
                 }
             }

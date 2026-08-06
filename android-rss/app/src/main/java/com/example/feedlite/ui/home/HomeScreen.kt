@@ -74,9 +74,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.MotionTokens
+import androidx.compose.material.icons.filled.Star
 import com.example.feedlite.data.FeedCategory
 import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.HtmlText
+import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
@@ -95,10 +97,12 @@ fun SharedTransitionScope.HomeScreen(
     repository: RssRepository,
     store: SubscriptionStore,
     updateSettings: UpdateSettings,
+    readingState: ReadingStateStore,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onOpenSource: (FeedSource) -> Unit,
     onOpenArticle: (RssItem) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenStarred: () -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(
         factory = viewModelFactory {
@@ -136,6 +140,10 @@ fun SharedTransitionScope.HomeScreen(
                     onOpenSettings = {
                         closeDrawer()
                         onOpenSettings()
+                    },
+                    onOpenStarred = {
+                        closeDrawer()
+                        onOpenStarred()
                     },
                     onAbout = { showAbout = true },
                     onConvertHelp = { showConvertHelp = true },
@@ -214,6 +222,7 @@ fun SharedTransitionScope.HomeScreen(
                                     HomeArticleCard(
                                         entry = entry,
                                         index = i,
+                                        isRead = readingState.isRead(entry.item.key),
                                         animatedVisibilityScope = animatedVisibilityScope,
                                         onClick = { onOpenArticle(entry.item) },
                                     )
@@ -248,6 +257,7 @@ fun SharedTransitionScope.HomeScreen(
 private fun SharedTransitionScope.HomeArticleCard(
     entry: FeedEntry,
     index: Int,
+    isRead: Boolean,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
@@ -292,12 +302,26 @@ private fun SharedTransitionScope.HomeArticleCard(
                 maxLines = 1,
             )
             Spacer(Modifier.height(2.dp))
-            Text(
-                text = entry.item.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // ★ 未读小圆点
+                if (!isRead) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                }
+                Text(
+                    text = entry.item.title,
+                    style = if (isRead) MaterialTheme.typography.titleSmall
+                    else MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                    color = if (isRead) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             // ★ 过滤「点击查看原文」等纯链接噪音，无实质内容不显示摘要
             if (HtmlText.hasMeaningfulContent(entry.item.descriptionHtml)) {
                 Spacer(Modifier.height(2.dp))
@@ -323,6 +347,7 @@ private fun DrawerContent(
     onAdd: () -> Unit,
     onDelete: (String) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenStarred: () -> Unit,
     onAbout: () -> Unit,
     onConvertHelp: () -> Unit,
 ) {
@@ -381,6 +406,14 @@ private fun DrawerContent(
 
         HorizontalDivider(Modifier.padding(vertical = 12.dp))
 
+        // ★ 我的收藏
+        NavigationDrawerItem(
+            label = { Text("我的收藏") },
+            icon = { Icon(Icons.Default.Star, contentDescription = null) },
+            selected = false,
+            onClick = onOpenStarred,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
         NavigationDrawerItem(
             label = { Text("设置") },
             icon = { Icon(Icons.Default.Settings, contentDescription = null) },

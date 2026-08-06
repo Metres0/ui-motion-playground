@@ -12,11 +12,12 @@ object FeedCatalog {
 
     val builtin: List<FeedSource> = listOf(
         // ── 技术 ──────────────────────────────
+        // v1.7：阮一峰源端仅输出最近 3 篇，替换为更新频繁的 solidot（每源 20+ 篇）
         FeedSource(
-            id = "ruanyifeng",
-            title = "阮一峰的网络日志",
-            description = "科技爱好者周刊、软件与创业",
-            url = "https://www.ruanyifeng.com/blog/atom.xml",
+            id = "solidot",
+            title = "Solidot 奇客",
+            description = "科技、开源与互联网资讯（原阮一峰位）",
+            url = "https://www.solidot.org/index.rss",
             category = FeedCategory.TECH,
             seed = 1,
         ),
@@ -43,6 +44,24 @@ object FeedCatalog {
             url = "https://www.infoq.cn/feed",
             category = FeedCategory.TECH,
             seed = 4,
+        ),
+        FeedSource(
+            id = "ithome",
+            title = "IT之家",
+            description = "科技资讯与数码评测（每日更新）",
+            url = "https://www.ithome.com/rss/",
+            category = FeedCategory.TECH,
+            defaultEnabled = false,
+            seed = 5,
+        ),
+        FeedSource(
+            id = "ifanr",
+            title = "爱范儿",
+            description = "数字生活与科技消费媒体",
+            url = "https://www.ifanr.com/feed",
+            category = FeedCategory.TECH,
+            defaultEnabled = false,
+            seed = 6,
         ),
 
         // ── AI ────────────────────────────────
@@ -100,7 +119,7 @@ object FeedCatalog {
             url = "https://36kr.com/feed",
             category = FeedCategory.BUSINESS,
             defaultEnabled = false,
-            seed = 5,
+            seed = 15,
         ),
 
         // ── 国际 ──────────────────────────────
@@ -111,7 +130,7 @@ object FeedCatalog {
             url = "https://www.theverge.com/rss/index.xml",
             category = FeedCategory.WORLD,
             defaultEnabled = false,
-            seed = 6,
+            seed = 16,
         ),
         FeedSource(
             id = "bbc",

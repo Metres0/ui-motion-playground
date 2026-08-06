@@ -6,8 +6,10 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +30,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.OpenInNew
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -44,6 +48,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -71,10 +76,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.ImageContext
 import com.example.feedlite.data.ReadingSettings
+import com.example.feedlite.data.ReadingStateStore
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
@@ -97,18 +106,27 @@ fun SharedTransitionScope.ArticleDetailScreen(
     translator: Translator,
     store: TranslationStore,
     fetcher: ArticleFetcher,
+    readingState: ReadingStateStore,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
 ) {
     val item = remember(itemKey) { ArticleCache.get(itemKey) }
     val context = LocalContext.current
 
-    // ★ 记录文章域名，供图片请求防盗链 Referer 使用（离开时清空）
+    // ★ 记录文章域名，供图片请求防盗链 Referer 使用（离开时清空）；进入即标记已读
     DisposableEffect(item) {
         ImageContext.articleRefererHost = item?.link?.let {
             runCatching { java.net.URI(it).host }.getOrNull()
         }
+        item?.let { readingState.markRead(it.key) }
         onDispose { ImageContext.articleRefererHost = null }
+    }
+
+    // ★ 收藏状态（本地可变，触发重绘）
+    var starred by remember(itemKey) { mutableStateOf(item?.let { readingState.isStarred(it.key) } ?: false) }
+    fun toggleStar() {
+        val it = item ?: return
+        starred = readingState.toggleStar(it)
     }
 
     var reading by remember { mutableStateOf(ReadingSettings(context).load()) }
@@ -147,6 +165,14 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 actions = {
                     IconButton(onClick = { showReadingPanel = true }) {
                         Icon(Icons.Default.FormatSize, contentDescription = "阅读设置")
+                    }
+                    // ★ 收藏
+                    IconButton(onClick = { toggleStar() }) {
+                        Icon(
+                            if (starred) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = if (starred) "取消收藏" else "收藏",
+                            tint = if (starred) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        )
                     }
                     IconButton(onClick = { viewModel.translate() }) {
                         Icon(Icons.Default.Translate, contentDescription = "翻译全文")
@@ -459,16 +485,44 @@ private fun BlockView(
 
         is HtmlBlocks.Block.CodeBlock -> CodeBlockView(block)
 
-        is HtmlBlocks.Block.Image -> ProgressiveImage(
-            url = block.url,
-            seed = block.url.hashCode(),
-            contentDescription = block.alt.ifBlank { null },
-            decodeWidth = 1280,
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(3f / 2f)
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
-        )
+        is HtmlBlocks.Block.Image -> ArticleBodyImage(block)
+    }
+}
+
+/** ★ 正文图片：自由比例渲染 + 点击弹出全屏大图。 */
+@Composable
+private fun ArticleBodyImage(block: HtmlBlocks.Block.Image) {
+    var showFull by remember(block.url) { mutableStateOf(false) }
+
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(block.url)
+            .crossfade(300)
+            .build(),
+        contentDescription = block.alt.ifBlank { null },
+        contentScale = ContentScale.FillWidth,
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+            .clickable { showFull = true },
+    )
+
+    if (showFull) {
+        Dialog(onDismissRequest = { showFull = false }) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { showFull = false },
+                contentAlignment = Alignment.Center,
+            ) {
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current).data(block.url).build(),
+                    contentDescription = block.alt.ifBlank { null },
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
     }
 }
 

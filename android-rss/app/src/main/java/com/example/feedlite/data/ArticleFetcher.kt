@@ -141,7 +141,51 @@ class ArticleFetcher {
                 " ",
             )
         }
+        // ★ v1.7：按关键词配对移除评论/相关推荐/表情/分享容器（少数派等站点常见噪音）
+        return removeNoiseContainers(s)
+    }
+
+    /**
+     * 配对移除噪音容器：`<div/section/aside class|id 含关键词>` 整块删除。
+     * 关键词覆盖：comment(评论)、extend/related/recommend/suggest(相关推荐)、emoji(表情)、share(分享)。
+     */
+    private fun removeNoiseContainers(html: String): String {
+        var s = html
+        val noiseRe = Regex(
+            """(?is)<(div|section|aside)\b(?:[^'">]|"[^"]*"|'[^']*')*(?:class|id)=["'][^"']*(?:comment|extend|recommend|related|suggest|emoji|share)[^"']*["'](?:[^'">]|"[^"]*"|'[^']*')*>"""
+        )
+        var guard = 0
+        while (guard < 20) {
+            val m = noiseRe.find(s) ?: break
+            val tag = m.groupValues[1]
+            val end = removeBalancedContainer(s, m.range.last + 1, tag)
+            if (end == null) break
+            s = s.removeRange(m.range.first, end)
+            guard++
+        }
         return s
+    }
+
+    /** 从 start 开始配对容器，返回结束标签后的位置；未闭合返回 null。 */
+    private fun removeBalancedContainer(html: String, start: Int, tag: String): Int? {
+        val openRe = Regex("""(?is)<$tag\b(?:[^'">]|"[^"]*"|'[^']*')*>""")
+        val closeRe = Regex("""(?is)</$tag\s*>""")
+        var depth = 0
+        var i = start
+        while (i < html.length) {
+            val o = openRe.find(html, i)
+            val c = closeRe.find(html, i)
+            val op = o?.range?.first ?: Int.MAX_VALUE
+            val cp = c?.range?.first ?: Int.MAX_VALUE
+            if (op == Int.MAX_VALUE && cp == Int.MAX_VALUE) return null
+            if (op <= cp) { depth++; i = o!!.range.last + 1 }
+            else {
+                depth--
+                if (depth < 0) return c!!.range.last + 1
+                i = c!!.range.last + 1
+            }
+        }
+        return null
     }
 
     /** 粗略估计正文文本量（提取的 <p> 内容长度和）。 */

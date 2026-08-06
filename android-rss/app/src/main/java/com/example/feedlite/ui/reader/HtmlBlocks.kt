@@ -31,11 +31,26 @@ object HtmlBlocks {
         val link: String? = null,
     )
 
+    /** 引号感知的标签匹配：跳过引号内的 `>`，杜绝 `data-v-...>` 属性残留被当文本。 */
     private val OPEN_BLOCK =
-        Regex("""(?is)<(h[1-6]|pre|ul|ol|blockquote|img|hr|p|div|section|article|figure)\b[^>]*>""")
+        Regex("""(?is)<(h[1-6]|pre|ul|ol|blockquote|img|hr|p|div|section|article|figure)\b(?:[^'">]|"[^"]*"|'[^']*')*>""")
+
+    /** 引号感知的任意标签（用于 inline 丢弃未知标签）。 */
+    private val ANY_TAG = Regex("""(?is)<(?:[a-zA-Z/!][^'">]*|"[^"]*"|'[^']*')*>""")
+
+    /** 判断图片是否像 emoji / 图标（不应渲染成大图）。 */
+    private fun looksLikeEmoji(url: String, alt: String): Boolean {
+        if (url.contains("emoji", ignoreCase = true)) return true
+        if (alt.length in 1..4 && alt.codePoints().allMatch { Character.isSurrogate(Character.toChars(it)[0]) || it >= 0x1F000 }) {
+            return true
+        }
+        return false
+    }
 
     /** 解析 HTML 为块序列。段落内嵌图片会拆出独立 Image 块。 */
-    fun parse(html: String): List<Block> {
+    fun parse(htmlInput: String): List<Block> {
+        // 先剥离 HTML 注释（Vue 站残留 <!---->）
+        val html = htmlInput.replace(Regex("""(?is)<!--[\s\S]*?-->"""), "")
         val blocks = ArrayList<Block>()
         val buf = StringBuilder()
 
@@ -60,7 +75,7 @@ object HtmlBlocks {
                     flush()
                     val url = Regex("""(?i)src=["']([^"']+)["']""").find(m.value)?.groupValues?.get(1)
                     val alt = Regex("""(?i)alt=["']([^"']*)["']""").find(m.value)?.groupValues?.get(1).orEmpty()
-                    if (!url.isNullOrBlank() && !url.startsWith("data:")) {
+                    if (!url.isNullOrBlank() && !url.startsWith("data:") && !looksLikeEmoji(url, alt)) {
                         blocks += Block.Image(url, alt)
                     }
                     pos = tagStart
@@ -136,25 +151,25 @@ object HtmlBlocks {
             val open = html.indexOf("<img", i, ignoreCase = true)
             if (open < 0) { buf.append(html, i, html.length); break }
             buf.append(html, i, open)
-            val close = html.indexOf('>', open)
-            if (close < 0) { buf.append(html, open, html.length); break }
-            val tag = html.substring(open, close + 1)
+            // 引号感知定位标签结束，杜绝属性值含 > 时截断残留
+            val tagMatch = Regex("""(?is)<img\b(?:[^'">]|"[^"]*"|'[^']*')*>""").find(html, open)
+            if (tagMatch == null) { buf.append(html, open, html.length); break }
+            val tag = tagMatch.value
             val url = Regex("""(?i)src=["']([^"']+)["']""").find(tag)?.groupValues?.get(1)
             val alt = Regex("""(?i)alt=["']([^"']*)["']""").find(tag)?.groupValues?.get(1).orEmpty()
-            if (!url.isNullOrBlank() && !url.startsWith("data:")) {
+            if (!url.isNullOrBlank() && !url.startsWith("data:") && !looksLikeEmoji(url, alt)) {
                 buf.append(' ')
                 out += Block.Image(url, alt)
             }
-            i = close + 1
+            i = tagMatch.range.last + 1
         }
     }
 
     /** 行内样式解析：strong/b、em/i、code、a、br、文本。img 已在块级处理，此处忽略。 */
     fun inline(html: String): List<Span> {
-        // 关键修复：未知标签（Vue 的 data-v-xxx div 等）与 <!-- --> 注释必须被消费丢弃，
-        // 否则 [^<]+ 会误把标签属性文本当正文输出（少数派全文脏文本的根因）。
+        // 引号感知的标签匹配：跳过引号内的 `>`，Vue 的 data-v-xxx 属性等未知标签整体丢弃
         val pattern = Regex(
-            """(?is)(<a\b[^>]*>.*?</a>|<strong>.*?</strong>|<b>.*?</b>|<em>.*?</em>|<i>.*?</i>|<code>.*?</code>|<br\s*/?>|<img\b[^>]*>|<!-{2}.*?-{2}>|<[a-zA-Z/][^>]*>|[^<]+)"""
+            """(?is)(<a\b(?:[^'">]|"[^"]*"|'[^']*')*>.*?</a\s*>|<strong>.*?</strong>|<b>.*?</b>|<em>.*?</em>|<i>.*?</i>|<code>.*?</code>|<br\s*/?>|<img\b(?:[^'">]|"[^"]*"|'[^']*')*>|<!-{2}[\s\S]*?-{2}>|<(?:[a-zA-Z/!][^'">]*|"[^"]*"|'[^']*')*>|[^<]+)"""
         )
         val spans = ArrayList<Span>()
 
