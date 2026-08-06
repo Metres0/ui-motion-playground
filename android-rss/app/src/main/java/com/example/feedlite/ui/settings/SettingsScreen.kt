@@ -44,10 +44,12 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +67,9 @@ import com.example.feedlite.data.ThemeSettings
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.UpdateSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /**
@@ -124,13 +129,14 @@ fun SettingsScreen(
                 val text = context.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: ""
                 val list = Opml.parse(text)
                 var added = 0
+                var invalid = 0
                 list.forEach { (title, url) ->
                     if (subscriptionStore.allSources().none { it.url == url }) {
-                        subscriptionStore.addCustom(title, url)
-                        added++
+                        if (subscriptionStore.addCustom(title, url) == null) added++ else invalid++
                     }
                 }
-                importMsg = "导入完成：新增 $added 个订阅源"
+                importMsg = "导入完成：新增 $added 个订阅源" +
+                    if (invalid > 0) "，$invalid 个因地址无效跳过" else ""
             } catch (e: Exception) {
                 importMsg = "导入失败：${e.message}"
             }
@@ -316,7 +322,11 @@ fun SettingsScreen(
                     }
                     FilterChip(
                         selected = updateCfg.intervalHours == h,
-                        onClick = { viewModel.setInterval(h) },
+                        onClick = {
+                            viewModel.setInterval(h)
+                            // ★ v1.32：立即按新间隔重新注册后台同步（0=手动则取消）
+                            com.example.feedlite.data.SyncScheduler.schedule(context)
+                        },
                         label = { Text(label) },
                     )
                 }
@@ -420,15 +430,21 @@ fun SettingsScreen(
                 Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
 
-            // ★ v1.25：缓存管理
+            // ★ v1.25：缓存管理（v1.32：统计在 IO 线程算，不卡主线程）
             Spacer(Modifier.height(16.dp))
             val cacheManager = remember { CacheManager(context) }
-            var cacheSize by remember { mutableStateOf(cacheManager.sizeText()) }
+            var cacheSize by remember { mutableStateOf("…") }
+            val cacheScope = rememberCoroutineScope()
+            LaunchedEffect(cacheManager) {
+                cacheSize = withContext(Dispatchers.IO) { cacheManager.sizeText() }
+            }
             OutlinedButton(
                 onClick = {
-                    cacheManager.clear()
-                    cacheSize = cacheManager.sizeText()
+                    cacheManager.clear() // 内部会重建目录，缓存写入不失效
                     android.widget.Toast.makeText(context, "缓存已清理", android.widget.Toast.LENGTH_SHORT).show()
+                    cacheScope.launch {
+                        cacheSize = withContext(Dispatchers.IO) { cacheManager.sizeText() }
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -449,7 +465,7 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(24.dp))
             Text(
-                "安全提示：API Key 明文存于本机，仅供个人使用；正式发布请改用 Keystore 加密存储。",
+                "安全（v1.32）：翻译 API Key 已使用系统密钥库（Android Keystore）加密存储，仅限当前设备解密。",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.outline,
             )
@@ -474,11 +490,11 @@ private fun AboutDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.size(40.dp),
             )
         },
-        title = { Text("轻阅 RSS v1.23") },
+        title = { Text("轻阅 RSS v${com.example.feedlite.BuildConfig.VERSION_NAME}") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("极简 RSS 阅读器 · 基于 Android 16")
-                Text("内置 20 个订阅源（技术/AI/Go/商业/国际分类）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("内置 18 个订阅源（技术/AI/Go/商业/国际分类）", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("富文本排版 · 阅读设置 · AI 翻译 · 离线缓存 · 稍后再看", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },

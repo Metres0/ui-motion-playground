@@ -1,9 +1,9 @@
 # UI Playground — 安卓 + Web 通用动效对照工程
 
-> ## 📱 FeedLite「轻阅 RSS」已交付（Android 16 / v1.1）
-> 本研究的**落地应用**：首页聚合流 + 侧边栏源管理 + AI 翻译、
-> 内置 8 个订阅源、先加载 5 篇 + 点击加载更多、共享元素转场 / stagger / 渐进式图片。
-> release 签名 APK：**[FeedLite-v1.1.apk](https://github.com/Metres0/ui-motion-playground/releases/latest)**。
+> ## 📱 FeedLite「轻阅 RSS」已交付（Android 16 / v1.32）
+> 本研究的**落地应用**：首页聚合流 + 源管理独立 Tab + AI 翻译 + 富文本阅读 +
+> 内置 18 个订阅源、先加载 5 篇 + 点击加载更多、共享元素转场 / stagger / 渐进式图片。
+> release 签名 APK：**[FeedLite-v1.32.apk](https://github.com/Metres0/ui-motion-playground/releases/latest)**。
 > 详见 **[`android-rss/README.md`](android-rss/README.md)**。
 
 一套演示「加载策略 + 页面切换效果 + 优先加载」的**双端对照 demo**。
@@ -19,13 +19,24 @@
 | 渐进式图片 | Coil `crossfade` + 模糊占位 | `img.onload` 淡入 + 占位色 |
 | 骨架屏 | shimmer 脉冲 | CSS `shimmer` 动画 |
 
+## 文档
+
+| 文档 | 内容 |
+|---|---|
+| **[`docs/design-frontend.md`](docs/design-frontend.md)** | 前端设计：UI 层、动效 token 体系、Compose 页面、Web 演示、无障碍 |
+| **[`docs/design-backend.md`](docs/design-backend.md)** | 后端（数据与服务层）设计：抓取/解析/持久化/缓存/翻译/后台同步/安全 |
+| **[`motion-tokens.md`](motion-tokens.md)** | 动效规范唯一事实来源（时长/缓动/位移/遮罩四张表） |
+| **[`docs/dev-toolchain.md`](docs/dev-toolchain.md)** | 本机构建工具链安装与踩坑记录 |
+
 ## 目录结构
 
 ```
 UI-All/
 ├── motion-tokens.md              # ★ 唯一动效事实来源（时长/缓动/位移/遮罩四张表）
 ├── README.md
-├── android-compose/              # Android 端（Android Studio 打开）
+├── docs/                         # 设计文档 + 工具链
+├── tools/verify-motion-tokens.ps1 # 动效 token 防漂移校验（gradlew verifyMotionTokens）
+├── android-compose/              # Android 教学 demo（Android Studio 打开）
 │   └── app/src/main/java/com/example/uiplayground/
 │       ├── MotionTokens.kt       # token → Compose 参数
 │       ├── data/                 # 模拟网络 / 请求合并 / 路由预取 / Paging

@@ -7,6 +7,7 @@ import com.example.feedlite.data.TranslationConfig
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.UpdateSettings
+import com.example.feedlite.data.UrlPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -68,6 +69,9 @@ class SettingsViewModel(
         val c = _config.value
         if (c.apiKey.isBlank()) return "请填写 API Key"
         if (!c.baseUrl.startsWith("http")) return "Base URL 必须以 http(s):// 开头"
+        if (!UrlPolicy.isAllowedTranslationBaseUrl(c.baseUrl)) {
+            return "翻译端点仅支持 https://（本地/内网 http 除外），防 API Key 明文出网"
+        }
         store.save(c)
         return null
     }

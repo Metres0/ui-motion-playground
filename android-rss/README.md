@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 源管理独立 Tab + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.31**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.32**。
 
 ---
 
@@ -11,10 +11,10 @@
 | 功能 | 说明 |
 |---|---|
 | 首页聚合流 | 并行抓取所有启用源，按「技术/AI/Go/商业/国际」**分类分段**展示 |
-| 侧边栏导航 | 分类分组的源管理（开关/添加/删除）、转源帮助、设置、关于 |
-| 内置 **13 个 RSS 源** | 新增 AI 类（量子位/OpenAI/HuggingFace/Google AI）与 Go 官方博客 |
-| 自定义源 | 抽屉内对话框输入名称 + Feed 地址，可添加 / 删除 |
-| **公众号 / 微博转源** | 侧边栏「转源帮助」：Wechat2RSS / RSSHub 部署与路由说明 |
+| 源管理独立 Tab | 底部「源」Tab：搜索 / 分类分组 / 开关 / 添加 / 删除 |
+| 内置 **18 个 RSS 源** | 技术/AI/Go/商业/国际（量子位/OpenAI/HuggingFace/Google AI/Go 官方博客等） |
+| 自定义源 | 「源」页对话框输入名称 + Feed 地址（严格校验 http/https） |
+| **公众号 / 微博转源** | 「源」页「转源帮助」：Wechat2RSS / RSSHub 部署与路由说明 |
 | 先加载 5 篇 | 进入文章列表只展示前 5 篇（一次网络请求） |
 | 点击加载更多 | 底部按钮每次追加 5 篇，直至「已加载全部」 |
 | **富文本排版** | 标题/段落独立/列表/引用/代码块（深色块+等宽+复制），行内加粗/斜体/链接 |
@@ -26,8 +26,38 @@
 | **查看全文** | 正文区底部「查看全文」按钮一键跳转原始网站（全文抓取失败时的兜底） |
 | **AI 翻译** | **译文替换原文显示，一键切换原文/译文**；代码块不参与翻译；设置页带「测试连接」 |
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
-| 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
-| 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+| 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器 |
+| 网络安全 | 默认禁止明文 HTTP，仅对 arXiv 等已知明文源放行；翻译端点强制 https |
+| Key 加密 | 翻译 API Key 用 Android Keystore（AES/GCM）加密存储，不再明文落盘 |
+| 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源；失败计数不再虚报 |
+| 后台同步 | 「自动更新」由 WorkManager 系统调度（网络可用时按间隔静默抓取） |
+
+## 二、v1.32 更新日志（工程加固）
+
+1. **修复刷新被 5 分钟 TTL 架空**：手动刷新 / 下拉刷新现在 `force` 绕过内存缓存，按下必发网络请求；
+2. **修复错误被吞**：列表页刷新失败不再被 Success 覆盖——有缓存保留列表 + 顶部错误横幅，
+   无缓存进入 Error 态；首页「成功 X/Y」按真实失败源统计，不再虚报；
+3. **分页/缓存数据安全**：
+   - `ArticleStore.merge` 按源加锁串行化，修复首页后台批量更新与列表页单源刷新并发丢更新；
+   - `FullTextCache` 线程安全 + 目录被清理后自动重建，离线全文缓存不再「清一次就永久失效」；
+   - `RssParser` key 改用 guid/link（稳定），源重排不再导致重复入库 / 收藏失联；字符集自动识别（GBK 中文源不再乱码）；
+   - `ArticleCache` 上限 100 条 LRU，长会话内存不再无限增长；
+4. **安全加固**：
+   - **翻译 API Key 改用 Android Keystore AES/GCM 加密存储**（`SecurePrefs`，零第三方依赖），旧明文自动迁移清除；
+   - **默认禁止明文 HTTP**（network_security_config），仅 arXiv 等已知明文源放行；
+   - 翻译端点强制 https（本地/内网 http 例外），防 Key 明文出网；
+   - 外部链接白名单（仅 http/https）+ try/catch，恶意 feed 的 `javascript:` 链接不再崩应用；
+   - 网络响应统一大小上限（feed 10MB / 全文 5MB / 翻译 2MB），防恶意源 OOM；
+   - feed 抓取瞬时故障自动重试（1s/2s 退避），HTTP 错误不重试；
+5. **后台自动同步**：`WorkManager` 按「自动更新间隔」系统调度（0=手动则取消），失败指数退避；
+6. **阅读设置回归**：详情页重新接回「Aa」入口（v1.30 误删），字号/行高/字体面板恢复可用；
+7. **主线程清理**：首页缓存读取、全文缓存命中、HTML 全文解析、设置页缓存统计全部挪到 IO/Default，
+   首屏与长文不再掉帧；
+8. **DI 容器**：新增 `AppContainer`（进程级单例），旋转/配置变更不再重建预取缓存与在途请求；
+   转场 lambda 收敛为 `slideEnter()/slideExit()` 两个扩展函数（原来 5 份拷贝）；
+9. **测试**：新增 `app/src/test/` JVM 单测——RssParser（key 稳定性/GBK/封面优先级/上限）、
+   HtmlText（实体/代理区防崩/噪音过滤）、CodeBlockExtractor（占位符/回退）、UrlPolicy；
+   `gradlew testDebugUnitTest` 可跑；`gradlew verifyMotionTokens` 校验双端动效 token 与 motion-tokens.md 一致。
 
 ## 二、v1.31 更新日志
 
@@ -307,7 +337,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.31 / versionCode 32 |
+| 版本 | versionName 1.32 / versionCode 33 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
@@ -380,23 +410,31 @@
 
 详细 token 表见仓库根目录 **`motion-tokens.md`**（唯一事实来源）。
 
-## 六、内置订阅源（13 个 · 按分类）
+## 六、内置订阅源（18 个 · 按分类）
 
 | 分类 | 源 | 默认启用 |
 |---|---|---|
-| 技术 | 阮一峰的网络日志 | ✅ |
+| 技术 | Solidot 奇客 | ✅ |
 | 技术 | 少数派 sspai | ✅ |
 | 技术 | V2EX | ✅ |
 | 技术 | InfoQ 中文 | ✅ |
+| 技术 | IT之家 | ⬜ |
+| 技术 | 爱范儿 | ⬜ |
+| 技术 | CNBeta | ⬜ |
 | AI | 量子位 | ✅ |
 | AI | Hugging Face Blog | ⬜ |
 | AI | OpenAI News | ⬜ |
 | AI | Google AI Blog | ⬜ |
+| AI | arXiv AI (cs.AI) | ⬜ |
 | Go | Go 官方博客 | ✅ |
 | 商业 | 36氪 | ⬜ |
+| 国际 | Hacker News | ⬜ |
 | 国际 | The Verge | ⬜ |
 | 国际 | BBC News | ⬜ |
 | 国际 | NASA Breaking News | ⬜ |
+
+> 可达性因网络环境而异；抓取失败会在列表页显示原因并可重试，
+> 不影响其他源。若全部失败请检查网络/代理。
 
 > 可达性因网络环境而异；抓取失败会在列表页显示原因并可重试，
 > 不影响其他源。若全部失败请检查网络/代理。
@@ -442,15 +480,20 @@ cd C:\Users\Administrator\Desktop\UI-All\android-rss
 ### 签名信息
 
 本地演示 keystore 位于 `android-rss/keystore/release.keystore`（**不入库**）。
-构建时通过环境变量注入密码，避免明文入库：
+口令来源（v1.32 起不再内置默认口令）：
 
 ```powershell
+# 方式一：环境变量
 $env:FEEDLITE_STORE_PASS = "你的store密码"
 $env:FEEDLITE_KEY_PASS  = "你的key密码"
+
+# 方式二：本地 keystore/keystore.properties（该目录整体被 .gitignore 排除）
+# storePassword=...
+# keyPassword=...
 ```
 
-> 仓库内 `app/build.gradle.kts` 保留了本机演示用的默认密码，
-> 仅当本地存在 keystore 文件时才生效；**正式发布请更换 keystore 并改走环境变量**。
+> 两者都没有时 `assembleRelease` 会直接报错并提示，绝不回退到硬编码口令。
+> **正式发布请更换 keystore 并妥善保管口令。**
 
 ## 九、安装与验证
 
@@ -472,7 +515,9 @@ C:\Android\sdk\platform-tools\adb.exe install -r app\build\outputs\apk\release\a
 
 ## 十、已知限制
 
-- RSS 正文仅展示 description/summary 的纯文本（未抓取全文页）；
+- 离线缓存覆盖「全文抓取结果」与「译文」（files/fulltext、files/translations）；
+  RSS 摘要本身走 SharedPreferences 持久化，杀进程不丢；需要主动清理时到设置页「清理离线缓存」；
 - 封面图依赖源提供的 enclosure/media 或正文首图，缺图显示柔和色块；
-- 无离线缓存（内存缓存重启即失）；刷新是手动触发；
+- 「自动更新」依赖系统 WorkManager 调度，省电模式下可能被系统延迟（属 Android 平台行为）；
+- 翻译 API Key 加密存储仅当前设备可解密，换机/刷机后需重新输入；
 - minSdk 26，Android 8.0 以下不可安装（有意为之，聚焦 Android 16 目标）。

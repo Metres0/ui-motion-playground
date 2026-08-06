@@ -1,5 +1,6 @@
 package com.example.feedlite.data
 
+import com.example.feedlite.data.HttpUtil.readBounded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -30,6 +31,10 @@ class Translator(private val store: TranslationStore, cacheDir: File?) {
         val cfg = store.current()
         if (cfg.apiKey.isBlank()) throw TranslationException("未配置翻译 API Key，请先到「设置」填写")
         if (text.isBlank()) throw TranslationException("没有可翻译的内容")
+        // 安全：翻译端点仅允许 https（本地/内网 http 除外），防 API Key 明文出网
+        if (!UrlPolicy.isAllowedTranslationBaseUrl(cfg.baseUrl)) {
+            throw TranslationException("翻译端点仅支持 https://（本地/内网 http 除外），请检查 Base URL")
+        }
 
         val url = cfg.baseUrl.trimEnd('/') + "/chat/completions"
         val body = JSONObject().apply {
@@ -67,10 +72,12 @@ class Translator(private val store: TranslationStore, cacheDir: File?) {
 
             val code = conn.responseCode
             if (code !in 200..299) {
-                val err = conn.errorStream?.readBytes()?.toString(Charsets.UTF_8) ?: ""
+                val err = conn.errorStream?.use { it.readBounded(4096) }?.toString(Charsets.UTF_8) ?: ""
                 throw TranslationException("接口返回 $code：${err.take(200)}")
             }
-            val resp = conn.inputStream.use { it.readBytes().toString(Charsets.UTF_8) }
+            val resp = conn.inputStream.use {
+                it.readBounded(HttpUtil.MAX_TRANSLATION_BYTES).toString(Charsets.UTF_8)
+            }
             val json = JSONObject(resp)
             val choices = json.optJSONArray("choices")
                 ?: throw TranslationException("响应缺少 choices 字段")

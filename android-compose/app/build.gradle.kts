@@ -52,5 +52,9 @@ dependencies {
     implementation(libs.androidx.paging.compose)
     implementation(libs.coil.compose)
 
+    // JVM 单元测试（纯 coroutine 逻辑，无需 Robolectric）
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+
     debugImplementation(libs.androidx.ui.tooling)
 }

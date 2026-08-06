@@ -40,15 +40,26 @@ class ArticleStore(context: Context) {
     /**
      * 增量合并：新文章（按 key 去重）插到最前，返回合并后的完整列表并保存。
      * @return 新增的文章数量
+     *
+     * 线程安全：同源并发合并（首页后台批量更新 + 列表页单源刷新）会产生
+     * 「读到同一旧快照 → 各自 save → 后写覆盖先写」的丢失更新，这里按
+     * sourceId 加锁串行化读-改-写。
      */
-    fun merge(sourceId: String, newItems: List<RssItem>): Int {
+    fun merge(sourceId: String, newItems: List<RssItem>): Int = synchronized(lockFor(sourceId)) {
         val existing = load(sourceId)
         val existingKeys = existing.map { it.key }.toHashSet()
         val fresh = newItems.filter { it.key !in existingKeys }
         val merged = (fresh + existing).take(MAX_ITEMS)
         save(sourceId, merged)
-        return fresh.size
+        fresh.size
     }
+
+    /** 手动刷新后的完整替换（同样串行化）。 */
+    fun replace(sourceId: String, items: List<RssItem>) = synchronized(lockFor(sourceId)) {
+        save(sourceId, items.take(MAX_ITEMS))
+    }
+
+    private fun lockFor(sourceId: String): Any = locks.getOrPut(sourceId) { Any() }
 
     /** 直接保存（用于手动刷新后的完整替换）。 */
     fun save(sourceId: String, items: List<RssItem>) {
@@ -65,6 +76,8 @@ class ArticleStore(context: Context) {
 
     private fun KEY_ITEMS(id: String) = "items_$id"
     private fun KEY_TIME(id: String) = "time_$id"
+
+    private val locks = java.util.concurrent.ConcurrentHashMap<String, Any>()
 
     companion object {
         private const val MAX_ITEMS = 200

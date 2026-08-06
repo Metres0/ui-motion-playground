@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  网络安全配置（v1.32）：默认禁止明文 HTTP，仅对少数已知明文源放行。
+  - export.arxiv.org：内置订阅源中唯一的 http:// 源（arxiv 官方 RSS 至今无 https 镜像）
+  - localhost / 10.0.2.2：本地开发与模拟器调试
+  翻译 API Key 由 UrlPolicy 另行强制 https，双保险。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">export.arxiv.org</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

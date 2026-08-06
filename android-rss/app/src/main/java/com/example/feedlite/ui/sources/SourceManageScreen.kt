@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.feedlite.data.FeedCategory
@@ -185,11 +186,19 @@ fun SourceManageScreen(
         }
     }
 
+    val uiContext = LocalContext.current // 供非 composable 回调使用
     if (showAddSource) {
         AddSourceDialog(
             onConfirm = { title, url ->
-                store.addCustom(title, url)
-                refresh(); onSubscriptionChanged()
+                // ★ v1.32：addCustom 现在校验 URL 协议并返回错误信息
+                val err = store.addCustom(title, url)
+                if (err != null) {
+                    android.widget.Toast.makeText(
+                        uiContext, err, android.widget.Toast.LENGTH_SHORT,
+                    ).show()
+                } else {
+                    refresh(); onSubscriptionChanged()
+                }
             },
             onDismiss = { showAddSource = false },
         )

@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -13,8 +15,8 @@ android {
         applicationId = "com.example.feedlite"
         minSdk = 26
         targetSdk = 36
-        versionCode = 32
-        versionName = "1.31"
+        versionCode = 33
+        versionName = "1.32"
     }
 
     signingConfigs {
@@ -22,9 +24,23 @@ android {
             val keystoreFile = rootProject.file("keystore/release.keystore")
             if (keystoreFile.exists()) {
                 storeFile = keystoreFile
-                storePassword = System.getenv("FEEDLITE_STORE_PASS") ?: "feedlite2026"
+                // ★ v1.32 安全加固：不再内置默认口令。
+                // 口令来源优先级：环境变量 FEEDLITE_STORE_PASS / FEEDLITE_KEY_PASS
+                // → 本地 gitignored 的 keystore/keystore.properties。
+                // keystore/ 目录整体被 .gitignore 排除，不会进入 VCS。
+                val props = Properties().apply {
+                    val f = rootProject.file("keystore/keystore.properties")
+                    if (f.exists()) f.inputStream().use { load(it) }
+                }
+                val envStorePass: String? = System.getenv("FEEDLITE_STORE_PASS")
+                storePassword = envStorePass
+                    ?: props.getProperty("storePassword")
+                    ?: error("缺少 release 签名口令：请设置环境变量 FEEDLITE_STORE_PASS 或创建 keystore/keystore.properties")
                 keyAlias = "feedlite"
-                keyPassword = System.getenv("FEEDLITE_KEY_PASS") ?: "feedlite2026"
+                val envKeyPass: String? = System.getenv("FEEDLITE_KEY_PASS")
+                keyPassword = envKeyPass
+                    ?: props.getProperty("keyPassword")
+                    ?: error("缺少 release 签名口令：请设置环境变量 FEEDLITE_KEY_PASS 或创建 keystore/keystore.properties")
             }
         }
     }
@@ -37,7 +53,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // release 签名见 README「构建与签名」章节（本地 keystore）
             signingConfig = signingConfigs.getByName("release")
         }
     }
@@ -51,6 +66,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -71,8 +87,23 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.work.runtime)
     implementation(libs.coil.compose)
     implementation(libs.okhttp)
 
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    // JVM 单测里解析 RSS 用 kxml2（自带 org.xmlpull API，替代 android.util.Xml stub）
+    testImplementation("net.sf.kxml:kxml2:2.3.0")
+
     debugImplementation(libs.androidx.ui.tooling)
+}
+
+// ★ v1.32：动效 token 防漂移校验（与 android-compose 端共用 tools/ 脚本）。
+// 运行：gradlew verifyMotionTokens
+tasks.register<Exec>("verifyMotionTokens") {
+    group = "verification"
+    description = "校验 MotionTokens.kt / styles.css / motion-tokens.md 三处 token 值一致"
+    val script = rootProject.file("../tools/verify-motion-tokens.ps1").absolutePath
+    commandLine("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script)
 }

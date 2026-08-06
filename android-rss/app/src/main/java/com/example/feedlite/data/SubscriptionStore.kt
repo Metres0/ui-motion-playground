@@ -48,8 +48,22 @@ class SubscriptionStore(context: Context) {
         }
     }
 
-    fun addCustom(title: String, url: String) {
-        val normalized = if (url.startsWith("http")) url else "https://$url"
+    /**
+     * 添加自定义源。
+     * @return 错误信息（成功为 null）。严格校验协议，只接受 http(s)://。
+     */
+    fun addCustom(title: String, url: String): String? {
+        val trimmed = url.trim()
+        val normalized = when {
+            trimmed.startsWith("https://") -> trimmed
+            trimmed.startsWith("http://") -> trimmed
+            trimmed.startsWith("//") -> "https:$trimmed"
+            trimmed.contains("://") -> return "仅支持 http(s):// 协议的订阅地址"
+            else -> "https://$trimmed"
+        }
+        val host = runCatching { java.net.URI(normalized).host }.getOrNull()
+        if (host.isNullOrBlank()) return "订阅地址格式不正确"
+
         val current = customSources().toMutableList()
         val existing = current.firstOrNull { it.url == normalized }
         if (existing != null) {
@@ -69,6 +83,7 @@ class SubscriptionStore(context: Context) {
             )
         }
         prefs.edit().putString(KEY_CUSTOM, JSONArray(current.map { it.toJson() }).toString()).apply()
+        return null
     }
 
     fun removeCustom(id: String) {

@@ -1,5 +1,6 @@
 package com.example.feedlite.data
 
+import com.example.feedlite.data.HttpUtil.readBounded
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
@@ -74,7 +75,9 @@ class ArticleFetcher(private val cache: FullTextCache? = null) {
             if (!host.isNullOrBlank()) conn.setRequestProperty("Referer", "https://$host/")
             val code = conn.responseCode
             if (code !in 200..299) throw RssFetchException("HTTP $code")
-            return conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+            return conn.inputStream.use {
+                it.readBounded(HttpUtil.MAX_ARTICLE_BYTES).toString(Charsets.UTF_8)
+            }
         } finally {
             conn.disconnect()
         }

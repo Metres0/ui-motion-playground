@@ -3,8 +3,6 @@ package com.example.uiplayground.ui.list
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.animation.rememberSharedContentState
-import androidx.compose.animation.sharedElement
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -44,7 +43,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.paging.LoadState
 import androidx.paging.compose.collectAsLazyPagingItems
-import androidx.paging.compose.items
+import androidx.paging.compose.itemKey
 import com.example.uiplayground.MotionTokens
 import com.example.uiplayground.data.Article
 import com.example.uiplayground.data.ArticleRepository
@@ -57,7 +56,7 @@ import kotlin.math.roundToInt
 /**
  * 列表页 —— 演示「Paging 预载 + stagger 进入 + 共享元素起点」。
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SharedTransitionScope.ListScreen(
     repository: ArticleRepository,
@@ -69,6 +68,9 @@ fun SharedTransitionScope.ListScreen(
     )
     val items = viewModel.articles.collectAsLazyPagingItems()
 
+    // 已经播过进入动画的文章 id：滚动出屏再回来时不再重播 stagger（卡片保持就位）
+    val animatedIds = remember { mutableSetOf<Long>() }
+
     Scaffold(
         topBar = { TopAppBar(title = { Text("列表 · Paging 预载 + 预取") }) }
     ) { padding ->
@@ -79,10 +81,15 @@ fun SharedTransitionScope.ListScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            items(items, key = { it?.id }) { article ->
+            items(
+                count = items.itemCount,
+                key = items.itemKey { it.id },
+            ) { index ->
+                val article = items[index]
                 if (article != null) {
                     ArticleCard(
                         article = article,
+                        animatedIds = animatedIds,
                         animatedVisibilityScope = animatedVisibilityScope,
                         onClick = { onArticleClick(article.id) },
                     )
@@ -107,13 +114,21 @@ fun SharedTransitionScope.ListScreen(
 @Composable
 fun SharedTransitionScope.ArticleCard(
     article: Article,
+    animatedIds: MutableSet<Long>,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onClick: () -> Unit,
 ) {
-    val enterOffset = remember(article.id) { Animatable(MotionTokens.Space.Small) }
-    val enterAlpha = remember(article.id) { Animatable(0f) }
+    // 首次进入（未在 animatedIds 里）才从「位移 + 透明 0」起播动画；
+    // 滚动回来时卡片直接初始化到最终态（offset 0 / alpha 1），保持就位不再重播
+    val enterOffset = remember(article.id) {
+        Animatable(if (article.id in animatedIds) 0f else MotionTokens.Space.Small)
+    }
+    val enterAlpha = remember(article.id) {
+        Animatable(if (article.id in animatedIds) 1f else 0f)
+    }
 
     LaunchedEffect(article.id) {
+        if (!animatedIds.add(article.id)) return@LaunchedEffect // 已播过：跳过
         delay(((article.id - 1) % 12) * 30L) // stagger 错峰
         coroutineScope {
             launch { enterOffset.animateTo(0f, MotionTokens.micro()) }

@@ -4,23 +4,33 @@ import android.content.Context
 import android.content.SharedPreferences
 
 /**
- * 翻译服务配置存储（SharedPreferences）。
+ * 翻译服务配置存储。
  *
  * - provider 预置模板：DeepSeek / MiMo / 自定义(OpenAI 兼容)
  * - 保存时校验 baseUrl 非空、以 http 开头
- * - 安全提示：API Key 以明文存于本机 SharedPreferences（演示级）；
- *   正式产品应改用 EncryptedSharedPreferences（androidx.security-crypto）。
+ * - 安全（v1.32）：API Key 改用 [SecurePrefs]（AndroidKeyStore AES/GCM）加密存储，
+ *   不再明文落盘；首次启动自动迁移旧版明文 Key 并清除残留。
  */
 class TranslationStore(context: Context) {
 
     private val prefs: SharedPreferences =
         context.getSharedPreferences("translation", Context.MODE_PRIVATE)
+    private val secure = SecurePrefs(context)
+
+    init {
+        // 一次性迁移：旧版明文 api_key → 加密存储，然后删除明文残留
+        val legacy = prefs.getString(KEY_API_KEY, null)
+        if (!legacy.isNullOrBlank() && secure.getString(KEY_API_KEY).isNullOrEmpty()) {
+            secure.putString(KEY_API_KEY, legacy)
+        }
+        prefs.edit().remove(KEY_API_KEY).apply()
+    }
 
     /** 读取当前配置。 */
     fun current(): TranslationConfig = TranslationConfig(
         provider = prefs.getString(KEY_PROVIDER, "deepseek") ?: "deepseek",
         baseUrl = prefs.getString(KEY_BASE_URL, DEFAULT_BASE_URLS["deepseek"]!!) ?: "",
-        apiKey = prefs.getString(KEY_API_KEY, "") ?: "",
+        apiKey = secure.getString(KEY_API_KEY) ?: "",
         model = prefs.getString(KEY_MODEL, DEFAULT_MODELS["deepseek"]!!) ?: "",
         targetLang = prefs.getString(KEY_TARGET, "中文") ?: "中文",
     )
@@ -29,14 +39,14 @@ class TranslationStore(context: Context) {
         prefs.edit()
             .putString(KEY_PROVIDER, config.provider)
             .putString(KEY_BASE_URL, config.baseUrl.trim())
-            .putString(KEY_API_KEY, config.apiKey.trim())
             .putString(KEY_MODEL, config.model.trim())
             .putString(KEY_TARGET, config.targetLang)
             .apply()
+        secure.putString(KEY_API_KEY, config.apiKey.trim())
     }
 
     fun isConfigured(): Boolean =
-        prefs.getString(KEY_API_KEY, "")?.isNotBlank() == true
+        secure.getString(KEY_API_KEY)?.isNotBlank() == true
 
     /** 应用 provider 模板（baseUrl + model 建议值），供设置页"选择模板"用。 */
     fun template(provider: String): TranslationConfig =

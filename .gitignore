@@ -23,3 +23,8 @@ Desktop.ini
 # ── Node / Web ───────────────────────────────────
 node_modules/
 dist/
+
+# ── 构建泄漏产物（gradle 任务偶发写到仓库根） ─────
+baseline-prof.txt
+lint.jar
+public.txt

@@ -16,10 +16,14 @@ import java.io.InputStream
  */
 object RssParser {
 
-    fun parse(stream: InputStream, source: FeedSource): RssFeed {
-        val parser = Xml.newPullParser()
+    fun parse(stream: InputStream, source: FeedSource): RssFeed =
+        parseWith(Xml.newPullParser(), stream, source)
+
+    /** 可注入解析器，便于 JVM 单测（生产用 [Xml.newPullParser]，测试用 kxml2）。 */
+    fun parseWith(parser: XmlPullParser, stream: InputStream, source: FeedSource): RssFeed {
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true)
-        parser.setInput(stream, "UTF-8")
+        // encoding 传 null：让解析器按 XML 声明自动识别字符集（GBK/GB2312 等中文源不再乱码）
+        parser.setInput(stream, null)
 
         val feedBase = source.url
         val feedHost = runCatching { java.net.URI(source.url).host }.getOrNull()
@@ -93,6 +97,8 @@ object RssParser {
                                         if (current!!["pubDate"].isNullOrEmpty()) current!!["pubDate"] = text
                                     "author", "creator" ->
                                         if (current!!["author"].isNullOrEmpty()) current!!["author"] = text
+                                    "guid", "id" ->
+                                        if (current!!["guid"].isNullOrEmpty()) current!!["guid"] = text
                                 }
                             }
                         } else if (!inItem) {
@@ -117,7 +123,7 @@ object RssParser {
                                         author = m["author"].orEmpty(),
                                         imageUrl = normalizeImageUrl(rawImage, feedBase),
                                         feedHost = feedHost,
-                                        key = "${source.id}_${itemCount}_${m["link"].orEmpty().trim()}",
+                                        key = stableKey(source.id, m),
                                     )
                                     itemCount++
                                 }
@@ -141,6 +147,19 @@ object RssParser {
             description = feedDesc,
             items = items,
         )
+    }
+
+    /**
+     * 生成稳定的文章 key（v1.32 修复）：优先 feed 提供的 guid/id，其次 link，
+     * 兜底用标题+时间的哈希。之前用「itemCount 位置索引」做 key，源重排/截断会
+     * 让同一篇文章换 key，导致重复入库、已读/收藏状态失联。
+     */
+    private fun stableKey(sourceId: String, m: Map<String, String>): String {
+        val guid = m["guid"].orEmpty().trim()
+        if (guid.isNotEmpty()) return "${sourceId}_guid_$guid"
+        val link = m["link"].orEmpty().trim()
+        if (link.isNotEmpty()) return "${sourceId}_$link"
+        return "${sourceId}_hash_${(m["title"].orEmpty() + "|" + m["pubDate"].orEmpty()).hashCode()}"
     }
 
     /**

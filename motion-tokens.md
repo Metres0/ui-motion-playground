@@ -16,6 +16,7 @@
 | `duration.enter` | 350 ms | **页面进入**（列表→详情） |
 | `duration.exit` | 90 ms | **页面退出**（离开当前页，必须比进入快） |
 | `duration.expansive` | 500 ms | 大图放大、全屏沉浸转场 |
+| `duration.skeleton` | 600 ms | 骨架屏 shimmer 单周期 |
 
 **规则：** 进出场永远不对称。进入 = `enter`（350ms，有"被展开"的舒展感），
 退出 = `exit`（90ms，让返回/关闭显得"响应迅速"）。
@@ -77,7 +78,7 @@
 | 共享元素（列表→大图） | 350 | emphasized | 自动计算 | none | `SharedTransitionLayout` + `sharedElement` | 同名 `view-transition-name` 自动位移缩放 |
 | 容器变换 | 300 | emphasized | — | none | `AnimatedContent` + `SizeTransform` | `::view-transition-old/new(root)` |
 | 预测式返回 | 跟手 | decelerate | `space.full` | scrim.light | `predictiveBackHandler` | 浏览器 `pageswap`/`pagereveal` |
-| 列表逐项进入 (stagger) | fast + 40ms/index | standard | `space.small` | — | `Animatable` + `delay(index * 40)` | Motion `staggerChildren` |
+| 列表逐项进入 (stagger) | fast + 30ms/index | standard | `space.small` | — | `Animatable` + `delay(index * 30)` | CSS `animation-delay: index*30ms` |
 | 弹簧回弹（按压） | spring | spring | `space.small` | scrim.light | `spring(0.8f)` | `cubic-bezier(0.34,1.56,0.64,1)` |
 | 渐进式图片 | 300 crossfade | standard | — | — | Coil `crossfade(300)` | `opacity` 过渡 + BlurHash |
 

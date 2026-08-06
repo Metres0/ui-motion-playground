@@ -8,10 +8,12 @@ import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.ui.ArticleCache
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface TranslationUiState {
     data object Idle : TranslationUiState
@@ -46,17 +48,19 @@ class ArticleDetailViewModel(
     val fullText: StateFlow<FullTextUiState> = _fullText.asStateFlow()
 
     init {
-        // 正文过短（只有摘要）时：先读离线缓存，未命中再抓取
+        // 正文过短（只有摘要）时：先读离线缓存（IO 线程，避免主线程读文件），未命中再抓取
         val item = ArticleCache.get(articleKey)
         val html = item?.descriptionHtml.orEmpty()
         val tooShort = !HtmlText.hasMeaningfulContent(html) || HtmlText.toPlainText(html).length < 300
         val link = item?.link.orEmpty()
         if (tooShort && link.isNotBlank()) {
-            val cached = fetcher.cachedOrNull(link)
-            if (cached != null) {
-                _fullText.value = FullTextUiState.Done(cached)
-            } else {
-                fetchFullText(link)
+            viewModelScope.launch {
+                val cached = withContext(Dispatchers.IO) { fetcher.cachedOrNull(link) }
+                if (cached != null) {
+                    _fullText.value = FullTextUiState.Done(cached)
+                } else {
+                    fetchFullText(link)
+                }
             }
         }
     }

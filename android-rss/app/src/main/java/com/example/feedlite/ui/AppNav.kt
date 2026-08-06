@@ -22,8 +22,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -32,17 +32,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.feedlite.AppContainer
 import com.example.feedlite.MotionTokens
 import com.example.feedlite.R
-import com.example.feedlite.data.ArticleFetcher
 import com.example.feedlite.data.FeedSource
-import com.example.feedlite.data.ReadingStateStore
-import com.example.feedlite.data.RssRepository
-import com.example.feedlite.data.SubscriptionStore
-import com.example.feedlite.data.ThemeSettings
-import com.example.feedlite.data.Translator
-import com.example.feedlite.data.TranslationStore
-import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.later.ReadLaterScreen
 import com.example.feedlite.ui.starred.StarredScreen
 import com.example.feedlite.ui.articles.ArticleListScreen
@@ -52,7 +45,7 @@ import com.example.feedlite.ui.settings.SettingsScreen
 import com.example.feedlite.ui.sources.SourceManageScreen
 
 /**
- * 导航编排（v1.14）：
+ * 导航编排（v1.14；v1.32：容器化 + 转场收敛）。
  *
  * - 底部导航栏：首页 / 收藏 / 稍后再看 三个 Tab
  * - articles/{sourceId} 单源文章列表
@@ -60,19 +53,20 @@ import com.example.feedlite.ui.sources.SourceManageScreen
  * - settings            设置
  *
  * 统一转场 token：进 350ms / 出 90ms，emphasized，返回镜像。
+ * 依赖一律来自 [AppContainer]，不再 8 参透传。
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
-fun AppNav(
-    store: SubscriptionStore,
-    repository: RssRepository,
-    translator: Translator,
-    translationStore: TranslationStore,
-    updateSettings: UpdateSettings,
-    fetcher: ArticleFetcher,
-    readingState: ReadingStateStore,
-    themeSettings: ThemeSettings,
-) {
+fun AppNav(container: AppContainer) {
+    val store = container.subscriptionStore
+    val repository = container.repository
+    val translator = container.translator
+    val translationStore = container.translationStore
+    val updateSettings = container.updateSettings
+    val fetcher = container.fetcher
+    val readingState = container.readingState
+    val themeSettings = container.themeSettings
+
     val nav = rememberNavController()
     // ★ 首页下拉时隐藏底部栏（仅首页滚动触发）
     var showHomeBar by remember { mutableStateOf(true) }
@@ -154,18 +148,8 @@ fun AppNav(
             composable(
                 route = "articles/{sourceId}",
                 arguments = listOf(navArgument("sourceId") { type = NavType.StringType }),
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeIn(MotionTokens.pageEnter())
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeOut(MotionTokens.pageExit())
-                },
+                enterTransition = { slideEnter() },
+                popExitTransition = { slideExit() },
             ) { entry ->
                 val sourceId = Uri.decode(entry.arguments?.getString("sourceId").orEmpty())
                 val scope = this
@@ -186,18 +170,8 @@ fun AppNav(
             composable(
                 route = "article/{itemKey}",
                 arguments = listOf(navArgument("itemKey") { type = NavType.StringType }),
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeIn(MotionTokens.pageEnter())
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeOut(MotionTokens.pageExit())
-                },
+                enterTransition = { slideEnter() },
+                popExitTransition = { slideExit() },
             ) { entry ->
                 val itemKey = Uri.decode(entry.arguments?.getString("itemKey").orEmpty())
                 val scope = this
@@ -213,18 +187,8 @@ fun AppNav(
             }
             composable(
                 route = "settings",
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeIn(MotionTokens.pageEnter())
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeOut(MotionTokens.pageExit())
-                },
+                enterTransition = { slideEnter() },
+                popExitTransition = { slideExit() },
             ) {
                 SettingsScreen(
                     store = translationStore,
@@ -239,18 +203,8 @@ fun AppNav(
             // ★ v1.30：源管理升级为底部导航 Tab（asTab 模式无返回行）
             composable(
                 route = "sources",
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeIn(MotionTokens.pageEnter())
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeOut(MotionTokens.pageExit())
-                },
+                enterTransition = { slideEnter() },
+                popExitTransition = { slideExit() },
             ) {
                 SourceManageScreen(
                     store = store,
@@ -263,18 +217,8 @@ fun AppNav(
             }
             composable(
                 route = "starred",
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeIn(MotionTokens.pageEnter())
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeOut(MotionTokens.pageExit())
-                },
+                enterTransition = { slideEnter() },
+                popExitTransition = { slideExit() },
             ) {
                 val scope = this
                 StarredScreen(
@@ -289,18 +233,8 @@ fun AppNav(
             }
             composable(
                 route = "later",
-                enterTransition = {
-                    slideIntoContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
-                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeIn(MotionTokens.pageEnter())
-                },
-                popExitTransition = {
-                    slideOutOfContainer(
-                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
-                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
-                    ) + fadeOut(MotionTokens.pageExit())
-                },
+                enterTransition = { slideEnter() },
+                popExitTransition = { slideExit() },
             ) {
                 val scope = this
                 ReadLaterScreen(
@@ -317,3 +251,17 @@ fun AppNav(
         }
     }
 }
+
+/** 页面进入转场：从右往左推入 350ms + 淡入（token 收敛，杜绝 5 份拷贝）。 */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.slideEnter() =
+    slideIntoContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
+    ) + fadeIn(MotionTokens.pageEnter())
+
+/** 页面退出转场：向右滑出 90ms + 淡出（返回镜像）。 */
+private fun AnimatedContentTransitionScope<NavBackStackEntry>.slideExit() =
+    slideOutOfContainer(
+        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
+    ) + fadeOut(MotionTokens.pageExit())

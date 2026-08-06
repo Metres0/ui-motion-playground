@@ -26,6 +26,8 @@ class PrefetchRouter(private val repository: ArticleRepository) {
     fun intercept(destinationRoute: String, args: Map<String, Any>) {
         // 只对详情路由做预取
         val id = args["id"] as? Long ?: return
+        // 先标记「发起过预取」再发请求：详情页据此 + 缓存命中情况展示「预取命中」徽章
+        repository.markPrefetched(id)
         scope.launch {
             try {
                 repository.getArticleDetail(id)

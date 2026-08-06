@@ -59,6 +59,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -81,6 +82,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.feedlite.data.ArticleFetcher
@@ -94,6 +97,8 @@ import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.ui.ArticleCache
 import com.example.feedlite.ui.components.ProgressiveImage
 import com.example.feedlite.ui.reader.HtmlBlocks
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /**
@@ -198,6 +203,16 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 }
                 Spacer(Modifier.weight(1f))
                 // ★ 收藏
+                // ★ 阅读设置（v1.30 回归修复：重新接回「Aa」入口）
+                IconButton(onClick = { showReadingPanel = true }, modifier = Modifier.size(40.dp)) {
+                    Text(
+                        "Aa",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.semantics { contentDescription = "阅读设置" },
+                    )
+                }
+                // ★ 收藏
                 IconButton(onClick = { toggleStar() }, modifier = Modifier.size(40.dp)) {
                     Icon(
                         if (starred) Icons.Default.Star else Icons.Default.StarBorder,
@@ -231,13 +246,16 @@ fun SharedTransitionScope.ArticleDetailScreen(
         val blocks = remember(item.descriptionHtml) { HtmlBlocks.parse(item.descriptionHtml) }
         val hasContent = remember(item.descriptionHtml) { HtmlText.hasMeaningfulContent(item.descriptionHtml) }
 
-        // ★ v1.5：全文抓取结果优先渲染
-        val fullTextBlocks = remember(fullText) {
-            (fullText as? FullTextUiState.Done)?.let { HtmlBlocks.parse(it.html) } ?: emptyList()
+        // ★ v1.5：全文抓取结果优先渲染。
+        // ★ v1.32：解析移到后台线程（长文 HTML 解析数百 ms，不能占主线程）。
+        val fullTextBlocks by produceState<List<HtmlBlocks.Block>>(emptyList(), fullText) {
+            value = withContext(Dispatchers.Default) {
+                (fullText as? FullTextUiState.Done)?.let { HtmlBlocks.parse(it.html) } ?: emptyList()
+            }
         }
         val showFullText = fullText is FullTextUiState.Done && fullTextBlocks.isNotEmpty()
         val effectiveBlocks = if (showFullText) fullTextBlocks else blocks
-        val bodyText = HtmlText.toPlainText(item.descriptionHtml)
+        val bodyText = remember(item.descriptionHtml) { HtmlText.toPlainText(item.descriptionHtml) }
 
         Column(
             modifier = Modifier
@@ -353,9 +371,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 if (item.link.isNotBlank()) {
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(
-                        onClick = {
-                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.link)))
-                        },
+                        onClick = { openWebLink(context, item.link) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -415,6 +431,20 @@ fun SharedTransitionScope.ArticleDetailScreen(
             },
             onDismiss = { showReadingPanel = false },
         )
+    }
+}
+
+/**
+ * 安全地打开外部链接：feed/正文中的 href 是不可信输入，只允许 http/https，
+ * 且 try/catch 兜底（`javascript:`、`intent:`、畸形 URI 等不能崩掉阅读器）。
+ */
+private fun openWebLink(context: android.content.Context, url: String) {
+    val uri = runCatching { Uri.parse(url) }.getOrNull() ?: return
+    if (uri.scheme != "http" && uri.scheme != "https") return
+    try {
+        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
+    } catch (e: Exception) {
+        // 无可用浏览器等：忽略，不崩溃
     }
 }
 
@@ -579,7 +609,7 @@ private fun RichText(
         onClick = { offset ->
             val url = annotated.getStringAnnotations("URL", offset, offset).firstOrNull()?.item
             if (url != null) {
-                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                openWebLink(context, url)
             }
         },
     )

@@ -4,26 +4,29 @@ import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.SpringSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.Spring
 
 /**
- * 统一动效 Token —— 对应仓库根目录 `motion-tokens.md` 的四张表。
+ * 统一动效 Token —— 与仓库根目录 motion-tokens.md 四张表严格一致。
  *
- * 改动规范必须改 motion-tokens.md，这里只做翻译，两处要保持一致。
+ * 改动规范必须改 motion-tokens.md，这里只做翻译；android-rss 与本文件必须逐值一致，
+ * 防漂移校验脚本见 tools/verify-motion-tokens.mjs。
  */
 object MotionTokens {
 
     // ── 1. 时长 ────────────────────────────────────────────────
     object Duration {
-        const val Instant = 0
-        const val Micro = 100
-        const val Fast = 180
-        const val Base = 220
-        const val Enter = 350 // 页面进入
-        const val Exit = 90   // 页面退出（必须比进入快）
-        const val Expansive = 500
+        const val Instant = 0      // 即时状态切换
+        const val Micro = 100      // 触摸反馈（ripple）、hover 高亮
+        const val Fast = 180       // 小元素淡入淡出、按钮按下释放
+        const val Base = 220       // 常规 UI 状态变化、tooltip
+        const val Enter = 350      // 页面进入（列表→详情）
+        const val Exit = 90        // 页面退出（必须比进入快）
+        const val Expansive = 500  // 大图放大、全屏沉浸转场
+        const val Skeleton = 600   // 骨架屏 shimmer 单周期
     }
 
     // ── 2. 缓动 ────────────────────────────────────────────────
@@ -40,10 +43,10 @@ object MotionTokens {
         /** cubic-bezier(0.4, 0, 1, 1) —— 出场加速 */
         val Accelerate = FastOutLinearInEasing
 
-        /** 弹性回弹，仅用于微交互 */
-        fun spring(bouncy: Boolean = false) =
-            if (bouncy) spring(dampingRatio = 0.5f, stiffness = Spring.StiffnessMedium)
-            else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium)
+        /** 弹性回弹，仅用于微交互（motion-tokens.md §2，非弹跳 0.8/400） */
+        fun spring(bouncy: Boolean = false): SpringSpec<Float> =
+            if (bouncy) spring(dampingRatio = 0.5f, stiffness = 500f)
+            else spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMedium) // 400
     }
 
     // ── 3. 位移 ────────────────────────────────────────────────

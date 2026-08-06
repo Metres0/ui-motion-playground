@@ -33,6 +33,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -130,13 +131,30 @@ fun SharedTransitionScope.ArticleListScreen(
             )
             is ArticleListUiState.Success -> {
                 val items = s.items
-                LazyColumn(
+                Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(padding),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    // ★ 刷新失败但保留缓存时：顶部错误横幅，不打断阅读
+                    if (s.updateError != null) {
+                        Surface(
+                            color = MaterialTheme.colorScheme.errorContainer,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = s.updateError,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
+                        }
+                    }
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
                     // ★ 只渲染前 visibleCount 篇
                     items(s.visibleCount, key = { items[it].key }) { i ->
                         val item = items[i]
@@ -164,11 +182,12 @@ fun SharedTransitionScope.ArticleListScreen(
                     if (items.isEmpty()) {
                         item { Text("该源暂时没有文章", modifier = Modifier.padding(32.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                     }
-                }
-            }
-        }
-    }
-}
+                    } // closes LazyColumn content lambda
+                } // closes Column
+            } // closes Success branch
+        } // closes when
+    } // closes Scaffold content lambda
+} // closes Scaffold
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable

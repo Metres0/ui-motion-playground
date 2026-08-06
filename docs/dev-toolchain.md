@@ -34,9 +34,14 @@ gradle --version
 # 构建 FeedLite
 cd C:\Users\Administrator\Desktop\UI-All\android-rss
 .\gradlew.bat assembleRelease
+#   签名口令：环境变量 FEEDLITE_STORE_PASS / FEEDLITE_KEY_PASS，
+#   或本地 keystore/keystore.properties（该目录 gitignored）。
 
 # 安装到已连接设备
 adb install -r app\build\outputs\apk\release\app-release.apk
+
+# 跑 JVM 单测 + 动效 token 防漂移校验
+.\gradlew.bat testDebugUnitTest verifyMotionTokens
 ```
 
 ## 安装过程中踩过的坑（备忘）

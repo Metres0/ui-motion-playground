@@ -8,8 +8,6 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.rememberSharedContentState
-import androidx.compose.animation.sharedElement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +28,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,13 +49,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.uiplayground.MotionTokens
 import com.example.uiplayground.data.ArticleRepository
 import com.example.uiplayground.ui.components.ProgressiveImage
 
 /**
  * 详情页 —— 演示「共享元素终点 + 渐进式大图 + 骨架屏 + 预取命中标记」。
  */
-@OptIn(ExperimentalSharedTransitionApi::class)
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun SharedTransitionScope.DetailScreen(
     articleId: Long,
@@ -102,6 +102,7 @@ fun SharedTransitionScope.DetailScreen(
                         url = detail.article.coverUrl,
                         seed = detail.article.seed,
                         contentDescription = detail.article.title,
+                        decodeWidth = 1280, // 详情大图按 1280px 解码（默认缩略图 360px）
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(3f / 2f)
@@ -168,7 +169,7 @@ private fun DetailSkeleton(modifier: Modifier = Modifier) {
     val pulse by rememberInfiniteTransition().animateFloat(
         initialValue = 0.35f,
         targetValue = 0.9f,
-        animationSpec = infiniteRepeatable(tween(600), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(tween(MotionTokens.Duration.Skeleton), RepeatMode.Reverse),
         label = "skeleton",
     )
     val block = Modifier

@@ -1,6 +1,5 @@
 package com.example.uiplayground.ui.detail
 
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.uiplayground.data.ArticleDetail
@@ -19,9 +18,9 @@ sealed interface DetailUiState {
 /**
  * 详情页 ViewModel。
  *
- * `prefetched` 的判定利用「预取命中 = 几乎零等待」的事实：
- * 路由预取把详情写进了 Repository 内存缓存，页面这里再请求时 < 80ms 即返回，
- * 说明数据是预取来的 —— 这是路由预取收益的直接可观测指标。
+ * `prefetched` 的判定基于 Repository 的真实缓存事实：
+ * `wasPrefetched(id)` 要求「路由层确实发起过预取」**且**「详情已写入内存缓存」，
+ * 不再用「耗时 < 80ms」这种脆弱启发式（慢网络 / 快机器都会误判）。
  */
 class DetailViewModel(
     private val repository: ArticleRepository,
@@ -38,11 +37,9 @@ class DetailViewModel(
     fun load() {
         viewModelScope.launch {
             _state.value = DetailUiState.Loading
-            val start = SystemClock.elapsedRealtime()
             try {
                 val detail = repository.getArticleDetail(articleId)
-                val elapsed = SystemClock.elapsedRealtime() - start
-                _state.value = DetailUiState.Success(detail, prefetched = elapsed < 80)
+                _state.value = DetailUiState.Success(detail, prefetched = repository.wasPrefetched(articleId))
             } catch (e: Exception) {
                 _state.value = DetailUiState.Error
             }

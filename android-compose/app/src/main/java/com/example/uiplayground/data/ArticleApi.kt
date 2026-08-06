@@ -4,25 +4,42 @@ import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 /**
- * 模拟远程接口。
- *
- * 用随机延迟模拟真实网络（详情页 200~800ms），图片用 picsum.photos 的稳定种子 URL，
- * 保证「渐进式加载」有真实可看的网络过程。
+ * 模拟远程接口（抽象为纯接口，便于 JVM 单测注入 Fake 实现，见 app/src/test）。
  */
-class ArticleApi {
+interface ArticleApi {
 
-    private val total = 60
-
-    /** 分页拉取列表。 */
-    suspend fun getArticles(page: Int, pageSize: Int): List<Article> {
-        delay(Random.nextLong(250, 550)) // 模拟网络延迟
-        val start = (page - 1) * pageSize
-        if (start >= total) return emptyList()
-        return (start until minOf(start + pageSize, total)).map { index -> articleAt(index) }
-    }
+    /**
+     * 分页拉取列表。
+     *
+     * 参数是「偏移量 + 数量」，**不是页码**：
+     * - [start]：本次拉取在总数据集（60 条）中的起始下标（0-based）
+     * - [count]：本次最多拉取多少条
+     *
+     * 选偏移量语义而不是「page × pageSize」，是因为 Paging3 用 offset 作 key 才能精确分页：
+     * 首屏 initialLoadSize=40 + 追加 loadSize=20 时，页码语义会重复取 20~39，
+     * 产生 keyed LazyColumn 下的重复 id；offset 语义保证任何一次追加都不与已有页重叠。
+     */
+    suspend fun getArticles(start: Int, count: Int): List<Article>
 
     /** 拉取详情。 */
-    suspend fun getArticleDetail(id: Long): ArticleDetail {
+    suspend fun getArticleDetail(id: Long): ArticleDetail
+}
+
+/**
+ * 默认实现（生产用）：用随机延迟模拟真实网络（详情页 200~800ms），
+ * 图片用 picsum.photos 的稳定种子 URL，保证「渐进式加载」有真实可看的网络过程。
+ */
+object FakeArticleApi : ArticleApi {
+
+    private const val total = 60
+
+    override suspend fun getArticles(start: Int, count: Int): List<Article> {
+        delay(Random.nextLong(250, 550)) // 模拟网络延迟
+        if (start >= total) return emptyList()
+        return (start until minOf(start + count, total)).map { index -> articleAt(index) }
+    }
+
+    override suspend fun getArticleDetail(id: Long): ArticleDetail {
         delay(Random.nextLong(200, 800)) // 模拟网络延迟
         val index = id.toInt() - 1
         val a = articleAt(index)

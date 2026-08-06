@@ -154,7 +154,7 @@ fun SharedTransitionScope.HomeScreen(
                         Spacer(Modifier.height(12.dp))
                         Text(
                             text = if (s.enabledCount == 0) "还没有启用任何订阅源\n到底部「设置」页勾选感兴趣的源"
-                            else "订阅源抓取失败，请检查网络\n（成功 ${s.loadedCount}/${s.enabledCount}）",
+                            else "订阅源抓取失败，请检查网络\n（成功 ${s.loadedCount - s.failedCount}/${s.enabledCount}）",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
