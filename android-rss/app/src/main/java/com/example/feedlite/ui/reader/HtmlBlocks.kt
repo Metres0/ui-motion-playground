@@ -3,11 +3,12 @@ package com.example.feedlite.ui.reader
 import com.example.feedlite.data.HtmlText
 
 /**
- * 轻量 HTML → 排版块 渲染器。
+ * 轻量 HTML → 排版块 渲染器（v1.3 重写：正则级扫描，段落独立，正文图片真实渲染）。
  *
- * 支持：h1-h6 / 段落 / 无序有序列表 / 引用 / 分隔线 / 代码块（pre、含 language）。
- * 行内样式：加粗、斜体、行内代码、链接（链接文本展示为 primary 色）、图片→[图片: alt]。
- * 代码块保持原文（**翻译时也保留**，见 CodeBlockExtractor）。
+ * 支持块级：h1-h6 / 段落（每 <p> 独立） / 有序无序列表 / 引用 / 分隔线 / 代码块 / 图片。
+ * 行内：加粗、斜体、行内代码、链接、换行。
+ * 正文图片（含段落内嵌）拆分为独立 Image 块，由详情页用 ProgressiveImage 真实渲染。
+ * 代码块保持原文（翻译时也不参与，见 CodeBlockExtractor）。
  */
 object HtmlBlocks {
 
@@ -18,6 +19,7 @@ object HtmlBlocks {
         data class UnorderedList(val items: List<List<Span>>) : Block()
         data class OrderedList(val items: List<List<Span>>) : Block()
         data class Quote(val spans: List<Span>) : Block()
+        data class Image(val url: String, val alt: String) : Block()
         data object Divider : Block()
     }
 
@@ -29,128 +31,126 @@ object HtmlBlocks {
         val link: String? = null,
     )
 
-    private val BLOCK_LEVEL = setOf(
-        "h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "ul", "ol", "li",
-        "blockquote", "hr", "pre", "br", "table", "tr", "td", "th", "section", "article",
-    )
+    private val OPEN_BLOCK =
+        Regex("""(?is)<(h[1-6]|pre|ul|ol|blockquote|img|hr|p)\b[^>]*>""")
 
-    /** 把 RSS description HTML 解析为块序列。 */
+    /** 解析 HTML 为块序列。段落内嵌图片会拆出独立 Image 块。 */
     fun parse(html: String): List<Block> {
         val blocks = ArrayList<Block>()
-        var i = 0
-        val len = html.length
-        val text = StringBuilder()
+        val buf = StringBuilder()
 
-        fun flushText() {
-            if (text.isNotBlank()) {
-                val spans = inline(text.toString())
+        fun flush() {
+            if (buf.isNotBlank()) {
+                val spans = inline(buf.toString())
                 if (spans.isNotEmpty()) blocks += Block.Paragraph(spans)
-                text.setLength(0)
+                buf.setLength(0)
             }
         }
 
-        while (i < len) {
-            val open = html.indexOf('<', i)
-            if (open < 0) {
-                text.append(html, i, len)
-                break
-            }
-            text.append(html, i, open)
-            val close = html.indexOf('>', open)
-            if (close < 0) {
-                text.append(html, open, len)
-                break
-            }
-            val tagLine = html.substring(open + 1, close).trim()
-            val rawName = tagLine.substringBefore(' ').removePrefix("/").lowercase()
-            val tagName = rawName.substringBefore('.') // 处理 h3.foo 之类
+        var pos = 0
+        while (pos < html.length) {
+            val m = OPEN_BLOCK.find(html, pos)
+            if (m == null) { buf.append(html, pos, html.length); break }
+            buf.append(html, pos, m.range.first)
+            val tag = m.groupValues[1].lowercase()
+            val tagStart = m.range.last + 1
 
-            when {
-                tagName in listOf("h1", "h2", "h3", "h4", "h5", "h6") -> {
-                    flushText()
-                    val level = tagName[1].digitToInt()
-                    val endTag = "</$tagName>"
-                    val endIdx = html.indexOf(endTag, close)
-                    val content = if (endIdx >= 0) html.substring(close + 1, endIdx) else ""
-                    blocks += Block.Heading(level, inline(content))
-                    i = if (endIdx >= 0) endIdx + endTag.length else len
-                }
-
-                tagName == "pre" -> {
-                    flushText()
-                    val endIdx = html.indexOf("</pre>", close)
-                    val code = if (endIdx >= 0) html.substring(close + 1, endIdx) else ""
-                    blocks += Block.CodeBlock(decodeCode(code), extractLang(tagLine))
-                    i = if (endIdx >= 0) endIdx + "</pre>".length else len
-                }
-
-                tagName == "ul" || tagName == "ol" -> {
-                    flushText()
-                    val ordered = tagName == "ol"
-                    val endTag = if (ordered) "</ol>" else "</ul>"
-                    val listEnd = html.indexOf(endTag, close)
-                    val segEnd = if (listEnd >= 0) listEnd else len
-                    val seg = html.substring(close + 1, segEnd)
-                    val items = ArrayList<List<Span>>()
-                    val liRegex = Regex("""<li[^>]*>([\s\S]*?)</li>""", RegexOption.IGNORE_CASE)
-                    for (m in liRegex.findAll(seg)) {
-                        val spans = inline(m.groupValues[1])
-                        if (spans.isNotEmpty()) items += spans
+            when (tag) {
+                "img" -> {
+                    flush()
+                    val url = Regex("""(?i)src=["']([^"']+)["']""").find(m.value)?.groupValues?.get(1)
+                    val alt = Regex("""(?i)alt=["']([^"']*)["']""").find(m.value)?.groupValues?.get(1).orEmpty()
+                    if (!url.isNullOrBlank() && !url.startsWith("data:")) {
+                        blocks += Block.Image(url, alt)
                     }
+                    pos = tagStart
+                }
+
+                "hr" -> { flush(); blocks += Block.Divider; pos = tagStart }
+
+                "h1", "h2", "h3", "h4", "h5", "h6" -> {
+                    flush()
+                    val endIdx = html.indexOf("</$tag>", tagStart, ignoreCase = true)
+                    val content = if (endIdx >= 0) html.substring(tagStart, endIdx) else ""
+                    blocks += Block.Heading(tag[1].digitToInt(), inline(content))
+                    pos = if (endIdx >= 0) endIdx + tag.length + 3 else html.length
+                }
+
+                "pre" -> {
+                    flush()
+                    val endIdx = html.indexOf("</pre>", tagStart, ignoreCase = true)
+                    val raw = if (endIdx >= 0) html.substring(tagStart, endIdx) else ""
+                    blocks += Block.CodeBlock(decodeCode(raw), extractLang(m.value))
+                    pos = if (endIdx >= 0) endIdx + "</pre>".length else html.length
+                }
+
+                "ul", "ol" -> {
+                    flush()
+                    val ordered = tag == "ol"
+                    val endIdx = html.indexOf("</$tag>", tagStart, ignoreCase = true)
+                    val segEnd = if (endIdx >= 0) endIdx else html.length
+                    val seg = html.substring(tagStart, segEnd)
+                    val items = Regex("""(?is)<li\b[^>]*>([\s\S]*?)</li\s*>""")
+                        .findAll(seg).map { inline(it.groupValues[1]) }.filter { it.isNotEmpty() }.toList()
                     if (items.isNotEmpty()) {
                         blocks += if (ordered) Block.OrderedList(items) else Block.UnorderedList(items)
                     }
-                    i = if (listEnd >= 0) listEnd + endTag.length else segEnd
+                    pos = if (endIdx >= 0) endIdx + tag.length + 3 else segEnd
                 }
 
-                tagName == "blockquote" -> {
-                    flushText()
-                    val endIdx = html.indexOf("</blockquote>", close)
-                    val content = if (endIdx >= 0) html.substring(close + 1, endIdx) else ""
+                "blockquote" -> {
+                    flush()
+                    val endIdx = html.indexOf("</blockquote>", tagStart, ignoreCase = true)
+                    val content = if (endIdx >= 0) html.substring(tagStart, endIdx) else ""
                     blocks += Block.Quote(inline(content))
-                    i = if (endIdx >= 0) endIdx + "</blockquote>".length else len
+                    pos = if (endIdx >= 0) endIdx + "</blockquote>".length else html.length
                 }
 
-                tagName == "hr" -> {
-                    flushText()
-                    blocks += Block.Divider
-                    i = close + 1
-                }
-
-                tagName == "br" -> {
-                    text.append('\n')
-                    i = close + 1
-                }
-
-                tagName in BLOCK_LEVEL -> {
-                    // p/div/li/table 等边界：结束标签补一个换行，分隔段落
-                    if (tagLine.startsWith("/")) text.append('\n')
-                    i = close + 1
-                }
-
-                else -> {
-                    // 内联标签（a/strong/em/code/img…）原样保留，交给 inline 解析
-                    i = close + 1
+                "p" -> {
+                    // 段落：一次性消费到 </p>，段内图片拆出 Image 块
+                    flush()
+                    val endIdx = html.indexOf("</p>", tagStart, ignoreCase = true)
+                    val content = if (endIdx >= 0) html.substring(tagStart, endIdx) else html.substring(tagStart)
+                    appendMixed(buf, content, blocks)
+                    pos = if (endIdx >= 0) endIdx + 4 else html.length
                 }
             }
         }
-        flushText()
+        flush()
         return blocks
     }
 
-    /** 行内样式解析：strong/b、em/i、code、a、img、文本。 */
-    fun inline(html: String): List<Span> {
-        var s = html
-            .replace(Regex("""(?i)<img[^>]*>""")) { m ->
-                Regex("""(?i)alt=["']([^"']*)["']""").find(m.value)?.groupValues?.get(1)?.let { "[图片: $it]" } ?: ""
+    /**
+     * 把一段 HTML 按 <img> 拆开：文本部分进 [buf]，图片直接输出为 Image 块。
+     * 解决「<p><img /></p>」段落内图片消失的问题。
+     */
+    private fun appendMixed(buf: StringBuilder, html: String, out: MutableList<Block>) {
+        var i = 0
+        while (i < html.length) {
+            val open = html.indexOf("<img", i, ignoreCase = true)
+            if (open < 0) { buf.append(html, i, html.length); break }
+            buf.append(html, i, open)
+            val close = html.indexOf('>', open)
+            if (close < 0) { buf.append(html, open, html.length); break }
+            val tag = html.substring(open, close + 1)
+            val url = Regex("""(?i)src=["']([^"']+)["']""").find(tag)?.groupValues?.get(1)
+            val alt = Regex("""(?i)alt=["']([^"']*)["']""").find(tag)?.groupValues?.get(1).orEmpty()
+            if (!url.isNullOrBlank() && !url.startsWith("data:")) {
+                buf.append(' ')
+                out += Block.Image(url, alt)
             }
+            i = close + 1
+        }
+    }
 
+    /** 行内样式解析：strong/b、em/i、code、a、br、文本。img 已在块级处理，此处忽略。 */
+    fun inline(html: String): List<Span> {
         val pattern = Regex(
-            """(?is)(<a\b[^>]*>.*?</a>|<strong>.*?</strong>|<b>.*?</b>|<em>.*?</em>|<i>.*?</i>|<code>.*?</code>|<br\s*/?>|[^<]+|<[^>]+>)"""
+            """(?is)(<a\b[^>]*>.*?</a>|<strong>.*?</strong>|<b>.*?</b>|<em>.*?</em>|<i>.*?</i>|<code>.*?</code>|<br\s*/?>|<img\b[^>]*>|[^<]+)"""
         )
         val spans = ArrayList<Span>()
 
-        for (m in pattern.findAll(s)) {
+        for (m in pattern.findAll(html)) {
             val t = m.value
             when {
                 t.startsWith("<a", ignoreCase = true) -> {
@@ -176,11 +176,11 @@ object HtmlBlocks {
                 }
                 t.equals("<br>", true) || t.equals("<br/>", true) || t.equals("<br />", true) ->
                     spans += Span("\n")
+                t.startsWith("<img", true) -> { /* 块级已处理，忽略 */ }
                 !t.startsWith("<") -> {
                     val plain = HtmlText.toPlainText(t)
                     if (plain.isNotBlank()) spans += Span(plain)
                 }
-                // 其余未知标签丢弃
             }
         }
         return spans

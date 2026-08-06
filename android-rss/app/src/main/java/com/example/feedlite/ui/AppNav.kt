@@ -142,6 +142,7 @@ fun AppNav(
             ) {
                 SettingsScreen(
                     store = translationStore,
+                    translator = translator,
                     onBack = { nav.popBackStack() },
                 )
             }

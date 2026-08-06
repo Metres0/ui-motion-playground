@@ -8,17 +8,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -38,6 +42,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.TranslationStore
+import com.example.feedlite.data.Translator
 import kotlin.math.roundToInt
 
 /**
@@ -49,16 +54,18 @@ import kotlin.math.roundToInt
 @Composable
 fun SettingsScreen(
     store: TranslationStore,
+    translator: Translator,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { SettingsViewModel(store, ReadingSettings(context)) }
+            initializer { SettingsViewModel(store, ReadingSettings(context), translator) }
         }
     )
     val config by viewModel.config.collectAsState()
     val reading by viewModel.readingConfig.collectAsState()
+    val testState by viewModel.testState.collectAsState()
     var saved by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -205,13 +212,41 @@ fun SettingsScreen(
             HorizontalDivider()
             Spacer(Modifier.height(16.dp))
 
-            Button(
-                onClick = {
-                    error = viewModel.saveAll()
-                    if (error == null) saved = true
-                },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("保存全部设置") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = {
+                        error = viewModel.saveAll()
+                        if (error == null) saved = true
+                    },
+                    modifier = Modifier.weight(1f),
+                ) { Text("保存全部设置") }
+                // ★ 测试连接：用当前配置发翻译请求验证
+                OutlinedButton(
+                    onClick = { viewModel.testConnection({}) },
+                    enabled = testState !is SettingsViewModel.TestState.Testing,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (testState is SettingsViewModel.TestState.Testing) {
+                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("测试中…")
+                    } else {
+                        Text("测试连接")
+                    }
+                }
+            }
+
+            when (val t = testState) {
+                is SettingsViewModel.TestState.Success -> {
+                    Spacer(Modifier.height(8.dp))
+                    Text("✓ 连接成功，返回：${t.reply.take(40)}", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodySmall)
+                }
+                is SettingsViewModel.TestState.Fail -> {
+                    Spacer(Modifier.height(8.dp))
+                    Text("✗ ${t.message}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                else -> Unit
+            }
 
             if (saved && error == null) {
                 Spacer(Modifier.height(8.dp))

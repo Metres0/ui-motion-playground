@@ -1,20 +1,54 @@
 package com.example.feedlite.ui.settings
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.TranslationConfig
 import com.example.feedlite.data.TranslationStore
+import com.example.feedlite.data.Translator
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /**
- * 设置页 ViewModel：翻译配置 + 阅读设置。
+ * 设置页 ViewModel：翻译配置 + 阅读设置 + 测试连接。
  */
 class SettingsViewModel(
     private val store: TranslationStore,
     private val reading: ReadingSettings,
+    private val translator: Translator,
 ) : ViewModel() {
+
+    // ── 测试连接 ────────────────────────────
+    sealed interface TestState {
+        data object Idle : TestState
+        data object Testing : TestState
+        data class Success(val reply: String) : TestState
+        data class Fail(val message: String) : TestState
+    }
+
+    private val _test = MutableStateFlow<TestState>(TestState.Idle)
+    val testState: StateFlow<TestState> = _test.asStateFlow()
+
+    /** 先保存当前翻译配置，再用它发一条翻译请求验证。 */
+    fun testConnection(onNotConfigured: () -> Unit) {
+        val err = saveTranslation()
+        if (err != null) {
+            _test.value = TestState.Fail(err)
+            return
+        }
+        if (_test.value is TestState.Testing) return
+        _test.value = TestState.Testing
+        viewModelScope.launch {
+            try {
+                val reply = translator.translate("测试连接：Hello world")
+                _test.value = TestState.Success(reply)
+            } catch (e: Exception) {
+                _test.value = TestState.Fail(e.message ?: "连接失败")
+            }
+        }
+    }
 
     // ── 翻译配置 ────────────────────────────
     private val _config = MutableStateFlow(store.current())
