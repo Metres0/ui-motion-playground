@@ -20,7 +20,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +63,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,6 +95,7 @@ import com.example.feedlite.data.TimeUtils
 import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.components.ProgressiveImage
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
@@ -109,6 +115,7 @@ fun SharedTransitionScope.HomeScreen(
     onOpenSettings: () -> Unit,
     onOpenStarred: () -> Unit,
     onOpenLater: () -> Unit,
+    onScrollVisibilityChange: (Boolean) -> Unit, // ★ 首页下拉时隐藏底部栏
 ) {
     val viewModel: HomeViewModel = viewModel(
         factory = viewModelFactory {
@@ -119,6 +126,21 @@ fun SharedTransitionScope.HomeScreen(
     val sources by viewModel.sources.collectAsState()
     val enabled by viewModel.enabled.collectAsState()
     val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
+
+    // ★ 滚动方向监听：向下滚动（内容下移）隐藏底部栏，向上滚动显示
+    val listState = rememberLazyListState()
+    LaunchedEffect(listState) {
+        var lastIndex = listState.firstVisibleItemIndex
+        var lastOffset = listState.firstVisibleItemScrollOffset
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }
+            .distinctUntilChanged()
+            .collect { (index, offset) ->
+                val scrollingDown = index > lastIndex || (index == lastIndex && offset > lastOffset)
+                onScrollVisibilityChange(!scrollingDown)
+                lastIndex = index
+                lastOffset = offset
+            }
+    }
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -164,30 +186,28 @@ fun SharedTransitionScope.HomeScreen(
     ) {
         Scaffold(
             topBar = {
-                // ★ 精简顶栏：紧凑 TopAppBar + 小 logo + 去掉稍后再看图标（底部栏已有）
-                TopAppBar(
-                    title = {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text("轻阅", style = MaterialTheme.typography.titleMedium)
-                        }
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "菜单")
-                        }
-                    },
-                    actions = {
-                        IconButton(onClick = viewModel::refresh) {
-                            Icon(Icons.Default.Refresh, contentDescription = "刷新全部")
-                        }
-                    },
-                )
+                // ★ 极简顶栏：无标题无 logo，仅两个小图标（约原 1/3 视觉占比）
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsPadding(WindowInsets.statusBars)
+                        .padding(horizontal = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = { coroutineScope.launch { drawerState.open() } },
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(Icons.Default.Menu, contentDescription = "菜单", modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    IconButton(
+                        onClick = viewModel::refresh,
+                        modifier = Modifier.size(40.dp),
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "刷新全部", modifier = Modifier.size(22.dp))
+                    }
+                }
             },
         ) { padding ->
             when (val s = state) {
@@ -230,6 +250,7 @@ fun SharedTransitionScope.HomeScreen(
                             if (list.isEmpty()) null else cat to list
                         }
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize().padding(padding),
                             contentPadding = PaddingValues(16.dp),
                         ) {

@@ -15,6 +15,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -67,15 +70,18 @@ fun AppNav(
     themeSettings: ThemeSettings,
 ) {
     val nav = rememberNavController()
+    // ★ 首页下拉时隐藏底部栏（仅首页滚动触发）
+    var showHomeBar by remember { mutableStateOf(true) }
 
     SharedTransitionLayout {
-        // ★ 底部导航栏（首页 / 收藏 / 稍后再看）
+        // ★ 底部导航栏（首页 / 收藏 / 稍后再看 / 设置）
         Scaffold(
             bottomBar = {
                 val backStack by nav.currentBackStackEntryAsState()
                 val current = backStack?.destination
-                // ★ 详情页自动隐藏底部栏；「设置」加入 Tab
-                val showBar = current?.route?.startsWith("article") != true
+                // ★ 详情页自动隐藏；首页在滚动下拉时隐藏
+                val showBar = current?.route?.startsWith("article") != true &&
+                    (current?.route != "home" || showHomeBar)
                 if (showBar) {
                 NavigationBar {
                     val items = listOf(
@@ -136,6 +142,7 @@ fun AppNav(
                     onOpenSettings = { nav.navigate("settings") },
                     onOpenStarred = { nav.navigate("starred") },
                     onOpenLater = { nav.navigate("later") },
+                    onScrollVisibilityChange = { visible -> showHomeBar = visible },
                 )
             }
             composable(
