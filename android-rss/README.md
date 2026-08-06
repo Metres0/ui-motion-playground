@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.12**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.13**。
 
 ---
 
@@ -28,6 +28,16 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.13 更新日志
+
+1. **App 图标体现用途**：主体改为 **RSS 信号波纹**（信号点 + 双同心弧，白色）
+   + 右下书签角标——一眼可辨「订阅阅读器」；渐变背景与玻璃光晕保留，
+   `monochrome` 主题图标同步为 RSS 信号；
+2. **功能图标统一重设计**：新增一套「**品牌渐变圆底 + 白色符号**」图标
+   （`ic_nav_home` RSS 信号 / `ic_nav_star` 收藏 / `ic_nav_bookmark` 稍后再看 /
+   `ic_nav_settings` 设置 / `ic_nav_help` 帮助），统一应用到侧边栏与首页顶栏，
+   与应用图标同一视觉语言（蓝→紫渐变）。
 
 ## 二、v1.12 更新日志
 
@@ -163,7 +173,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.12 / versionCode 13 |
+| 版本 | versionName 1.13 / versionCode 14 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

@@ -68,6 +68,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -187,7 +188,11 @@ fun SharedTransitionScope.HomeScreen(
                         // ★ 稍后再看角标（点击直接进挂起列表）
                         Box {
                             IconButton(onClick = onOpenLater) {
-                                Icon(Icons.Default.Bookmarks, contentDescription = "稍后再看")
+                                Icon(
+                                    painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark),
+                                    contentDescription = "稍后再看",
+                                    tint = Color.Unspecified,
+                                )
                             }
                             if (laterCount > 0) {
                                 Badge(
@@ -487,7 +492,7 @@ private fun DrawerContent(
         )
         NavigationDrawerItem(
             label = { Text("公众号 / 微博转源帮助") },
-            icon = { Icon(Icons.Default.HelpOutline, contentDescription = null) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = Color.Unspecified) },
             selected = false,
             onClick = onConvertHelp,
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -498,7 +503,7 @@ private fun DrawerContent(
         // ★ 我的收藏
         NavigationDrawerItem(
             label = { Text("我的收藏") },
-            icon = { Icon(Icons.Default.Star, contentDescription = null) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = Color.Unspecified) },
             selected = false,
             onClick = onOpenStarred,
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -506,21 +511,21 @@ private fun DrawerContent(
         // ★ 稍后再看
         NavigationDrawerItem(
             label = { Text("稍后再看") },
-            icon = { Icon(Icons.Default.Bookmarks, contentDescription = null) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = Color.Unspecified) },
             selected = false,
             onClick = onOpenLater,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(
             label = { Text("设置") },
-            icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = Color.Unspecified) },
             selected = false,
             onClick = onOpenSettings,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(
             label = { Text("关于") },
-            icon = { Icon(Icons.Default.Info, contentDescription = null) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = Color.Unspecified) },
             selected = false,
             onClick = onAbout,
             modifier = Modifier.padding(horizontal = 12.dp),

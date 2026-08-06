@@ -1,0 +1,36 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,2 a10,10 0 1,1 0.01,0 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="4"
+                android:startY="2"
+                android:endX="20"
+                android:endY="22"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
+    <!-- 白色齿轮（简化：圆环 + 4 齿） -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,7.5 a4.5,4.5 0 1,1 0.01,0 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.8,5.2 h2.4 v-2.0 a1.0,1.0 0 0,0 -1.0,-1.0 h-0.4 a1.0,1.0 0 0,0 -1.0,1.0 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.8,18.8 h2.4 v2.0 a1.0,1.0 0 0,1 -1.0,1.0 h-0.4 a1.0,1.0 0 0,1 -1.0,-1.0 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5.2,10.8 h-2.0 a1.0,1.0 0 0,0 -1.0,1.0 v0.4 a1.0,1.0 0 0,0 1.0,1.0 h2.0 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18.8,10.8 h2.0 a1.0,1.0 0 0,1 1.0,1.0 v0.4 a1.0,1.0 0 0,1 -1.0,1.0 h-2.0 z" />
+</vector>

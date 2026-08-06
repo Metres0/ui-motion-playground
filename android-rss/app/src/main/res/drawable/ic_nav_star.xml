@@ -1,0 +1,24 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M12,2 a10,10 0 1,1 0.01,0 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="4"
+                android:startY="2"
+                android:endX="20"
+                android:endY="22"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
+    <!-- 白色五角星 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,4.6 l2.0,4.3 4.7,0.5 -3.5,3.2 1.0,4.6 L12,15.2 7.8,17.2 8.8,12.6 5.3,9.4 10.0,8.9 z" />
+</vector>
