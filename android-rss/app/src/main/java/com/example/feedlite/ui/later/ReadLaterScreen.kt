@@ -73,20 +73,10 @@ fun SharedTransitionScope.ReadLaterScreen(
 
     LaunchedEffect(version) { items = readingState.readLaterItems() }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("稍后再看") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    // ★ v1.19：浮动图标行（无 TopAppBar 大标题）
+    Box(Modifier.fillMaxSize()) {
         if (items.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(
                         painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
@@ -99,8 +89,8 @@ fun SharedTransitionScope.ReadLaterScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 28.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items.size, key = { items[it].key }) { i ->

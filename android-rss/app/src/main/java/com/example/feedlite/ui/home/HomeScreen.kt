@@ -239,51 +239,25 @@ fun SharedTransitionScope.HomeScreen(
                             Button(onClick = viewModel::refresh) { Text("重试") }
                         }
                     } else {
-                        // ★ 按分类分段的聚合流
-                        val groups = FeedCategory.ORDER.mapNotNull { cat ->
-                            val list = s.entries.filter { it.source.category == cat }
-                            if (list.isEmpty()) null else cat to list
-                        }
+                        // ★ v1.19：去掉分类标题行，全部文章直接铺开（顶部空间让给内容/侧边栏）
+                        val entries = s.entries
                         LazyColumn(
                             state = listState,
                             modifier = Modifier.fillMaxSize(),
                             // ★ 顶部只留图标行高度，内容紧贴
                             contentPadding = PaddingValues(top = 26.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                         ) {
-                            groups.forEach { (cat, list) ->
-                                item(key = "header_$cat") {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(top = 0.dp, bottom = 2.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Text(
-                                            cat,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                        )
-                                        Spacer(Modifier.weight(1f))
-                                        Text(
-                                            "${list.size} 篇",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.outline,
-                                        )
-                                    }
-                                }
-                                items(list.size, key = { list[it].item.key }) { i ->
-                                    val entry = list[i]
-                                    HomeArticleCard(
-                                        entry = entry,
-                                        index = i,
-                                        readingState = readingState,
-                                        refreshKey = readVersion,
-                                        animatedVisibilityScope = animatedVisibilityScope,
-                                        onClick = { onOpenArticle(entry.item) },
-                                    )
-                                    Spacer(Modifier.height(12.dp))
-                                }
+                            items(entries.size, key = { entries[it].item.key }) { i ->
+                                val entry = entries[i]
+                                HomeArticleCard(
+                                    entry = entry,
+                                    index = i,
+                                    readingState = readingState,
+                                    refreshKey = readVersion,
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                    onClick = { onOpenArticle(entry.item) },
+                                )
+                                Spacer(Modifier.height(12.dp))
                             }
                         }
                     }
@@ -485,7 +459,7 @@ private fun DrawerContent(
         )
         NavigationDrawerItem(
             label = { Text("公众号 / 微博转源帮助") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
             selected = false,
             onClick = onConvertHelp,
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -496,7 +470,7 @@ private fun DrawerContent(
         // ★ 我的收藏
         NavigationDrawerItem(
             label = { Text("我的收藏") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_star), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
             selected = false,
             onClick = onOpenStarred,
             modifier = Modifier.padding(horizontal = 12.dp),
@@ -504,21 +478,21 @@ private fun DrawerContent(
         // ★ 稍后再看
         NavigationDrawerItem(
             label = { Text("稍后再看") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
             selected = false,
             onClick = onOpenLater,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(
             label = { Text("设置") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_settings), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
             selected = false,
             onClick = onOpenSettings,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
         NavigationDrawerItem(
             label = { Text("关于") },
-            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            icon = { Icon(painterResource(com.example.feedlite.R.drawable.ic_nav_help), contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(26.dp)) },
             selected = false,
             onClick = onAbout,
             modifier = Modifier.padding(horizontal = 12.dp),

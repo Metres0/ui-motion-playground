@@ -95,25 +95,25 @@ fun SharedTransitionScope.StarredScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("我的收藏") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { exportLauncher.launch("feedlite_favorites.json") }) {
-                        Icon(Icons.Default.Share, contentDescription = "导出收藏")
-                    }
-                },
-            )
-        },
-    ) { padding ->
+    // ★ v1.19：浮动图标行（无 TopAppBar 大标题，底部栏已提供 Tab 语义）
+    Box(Modifier.fillMaxSize()) {
+        // 浮动行：右上「导出」图标
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopEnd)
+                .padding(end = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = { exportLauncher.launch("feedlite_favorites.json") },
+                modifier = Modifier.size(26.dp),
+            ) {
+                Icon(Icons.Default.Share, contentDescription = "导出收藏", modifier = Modifier.size(18.dp))
+            }
+        }
         if (items.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Image(
                         painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
@@ -126,8 +126,8 @@ fun SharedTransitionScope.StarredScreen(
             }
         } else {
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = 28.dp, start = 16.dp, end = 16.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(items.size, key = { items[it].key }) { i ->
