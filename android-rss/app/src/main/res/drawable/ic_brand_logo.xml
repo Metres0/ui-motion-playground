@@ -1,0 +1,43 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- 品牌渐变圆角方块（与应用图标呼应） -->
+    <path
+        android:pathData="M22,18 h64 a16,16 0 0,1 16,16 v58 a16,16 0 0,1 -16,16 h-64 a16,16 0 0,1 -16,-16 v-58 a16,16 0 0,1 16,-16 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="24"
+                android:startY="16"
+                android:endX="88"
+                android:endY="96"
+                android:type="linear"
+                android:startColor="#FF4D8BFF"
+                android:endColor="#FF6B5CF5" />
+        </aapt:attr>
+    </path>
+    <!-- 右上玻璃高光 -->
+    <path
+        android:pathData="M44,24 a26,26 0 1,1 58,0 a26,26 0 1,1 -58,0 z"
+        android:fillColor="#22FFFFFF" />
+    <!-- 白色卡片 -->
+    <path
+        android:fillColor="#F0FFFFFF"
+        android:pathData="M34,42 h34 a12,12 0 0,1 12,12 v28 a12,12 0 0,1 -12,12 h-34 a12,12 0 0,1 -12,-12 v-28 a12,12 0 0,1 12,-12 z" />
+    <!-- 卡片文本行（品牌蓝） -->
+    <path
+        android:fillColor="#FF4D8BFF"
+        android:pathData="M36,52 h26 a1.8,1.8 0 0,1 1.8,1.8 v0 a1.8,1.8 0 0,1 -1.8,1.8 h-26 a1.8,1.8 0 0,1 -1.8,-1.8 v0 a1.8,1.8 0 0,1 1.8,-1.8 z" />
+    <path
+        android:fillColor="#FF4D8BFF"
+        android:pathData="M36,62 h16 a1.8,1.8 0 0,1 1.8,1.8 v0 a1.8,1.8 0 0,1 -1.8,1.8 h-16 a1.8,1.8 0 0,1 -1.8,-1.8 v0 a1.8,1.8 0 0,1 1.8,-1.8 z" />
+    <path
+        android:fillColor="#FF4D8BFF"
+        android:pathData="M36,72 h22 a1.8,1.8 0 0,1 1.8,1.8 v0 a1.8,1.8 0 0,1 -1.8,1.8 h-22 a1.8,1.8 0 0,1 -1.8,-1.8 v0 a1.8,1.8 0 0,1 1.8,-1.8 z" />
+    <!-- 暖橙提示点 -->
+    <path
+        android:fillColor="#FFFFC15A"
+        android:pathData="M72,36 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0 z" />
+</vector>

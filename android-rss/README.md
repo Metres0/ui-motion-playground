@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.11**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.12**。
 
 ---
 
@@ -28,6 +28,13 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.12 更新日志
+
+1. **应用内品牌图标**：新增自绘渐变卡片 Logo（`ic_brand_logo`，与应用图标同源），
+   应用到首页顶栏标题、侧边栏头部、关于对话框、首页/收藏/稍后再看空态——
+   应用内不再只有 Material 默认图标，品牌感统一；
+2. 功能图标（收藏 / 稍后再看 / 设置等）保持 Material 语义图标保证识别度。
 
 ## 二、v1.11 更新日志
 
@@ -156,7 +163,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.11 / versionCode 12 |
+| 版本 | versionName 1.12 / versionCode 13 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |

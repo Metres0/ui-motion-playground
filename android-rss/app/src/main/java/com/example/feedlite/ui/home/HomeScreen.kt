@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -68,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -164,7 +166,18 @@ fun SharedTransitionScope.HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("轻阅 RSS") },
+                    title = {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // ★ 品牌 logo 小图标
+                            Image(
+                                painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
+                                contentDescription = null,
+                                modifier = Modifier.size(26.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("轻阅 RSS")
+                        }
+                    },
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
                             Icon(Icons.Default.Menu, contentDescription = "菜单")
@@ -214,7 +227,11 @@ fun SharedTransitionScope.HomeScreen(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center,
                         ) {
-                            Icon(Icons.Default.RssFeed, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.outline)
+                            Image(
+                                painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                            )
                             Spacer(Modifier.height(12.dp))
                             Text(
                                 text = if (s.enabledCount == 0) "还没有启用任何订阅源\n打开左侧菜单勾选感兴趣的源"
@@ -407,7 +424,15 @@ private fun DrawerContent(
             .padding(bottom = 24.dp),
     ) {
         Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-            Text("轻阅 RSS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp),
+                )
+                Spacer(Modifier.width(10.dp))
+                Text("轻阅 RSS", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            }
             Text(
                 "订阅源 · ${enabled.size}/${sources.size} 已启用",
                 style = MaterialTheme.typography.bodySmall,
@@ -639,7 +664,13 @@ private fun ConvertHelpDialog(onDismiss: () -> Unit) {
 private fun AboutDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Default.Info, contentDescription = null) },
+        icon = {
+            Image(
+                painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+            )
+        },
         title = { Text("轻阅 RSS v1.2") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
