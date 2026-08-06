@@ -59,4 +59,20 @@ object HtmlText {
         val plain = toPlainText(html).replace('\n', ' ')
         return if (plain.length <= maxLength) plain else plain.take(maxLength).trimEnd() + "…"
     }
+
+    /**
+     * 判断正文是否有实质内容。
+     * 过滤「点击查看原文」「查看全文」「阅读全文」等纯链接噪音后，剩余文本不足阈值视为无内容
+     * （如 InfoQ 的 description 只有"点击查看原文"，应识别为无摘要）。
+     */
+    fun hasMeaningfulContent(html: String): Boolean {
+        val plain = toPlainText(html).replace('\n', ' ').trim()
+        if (plain.isEmpty()) return false
+        var s = plain
+        s = s.replace(Regex("""(点击|查看|阅读|打开|继续)?原文?|查看全文|阅读全文|点击查看"""), "")
+        // 去掉纯 URL
+        s = s.replace(Regex("""https?://\S+"""), "")
+        s = s.replace(Regex("""[>\s]+"""), " ").trim()
+        return s.length >= 20 || (plain.length >= 20)
+    }
 }

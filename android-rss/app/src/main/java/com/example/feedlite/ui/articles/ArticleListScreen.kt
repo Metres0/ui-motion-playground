@@ -55,6 +55,7 @@ import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.components.ProgressiveImage
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
@@ -74,13 +75,14 @@ fun SharedTransitionScope.ArticleListScreen(
     sourceId: String,
     repository: RssRepository,
     store: SubscriptionStore,
+    updateSettings: UpdateSettings,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onBack: () -> Unit,
     onOpenArticle: (RssItem) -> Unit,
 ) {
     val viewModel: ArticleListViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { ArticleListViewModel(repository, store, sourceId) }
+            initializer { ArticleListViewModel(repository, store, updateSettings, sourceId) }
         }
     )
     val state by viewModel.state.collectAsState()
@@ -91,7 +93,7 @@ fun SharedTransitionScope.ArticleListScreen(
                 title = {
                     when (val s = state) {
                         is ArticleListUiState.Success -> Text(
-                            s.feed.title,
+                            s.sourceTitle,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -119,7 +121,7 @@ fun SharedTransitionScope.ArticleListScreen(
                 onRetry = viewModel::load,
             )
             is ArticleListUiState.Success -> {
-                val items = s.feed.items
+                val items = s.items
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
@@ -201,14 +203,17 @@ fun SharedTransitionScope.ArticleCard(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(item.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = HtmlText.excerpt(item.descriptionHtml),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // ★ 过滤「点击查看原文」噪音
+            if (HtmlText.hasMeaningfulContent(item.descriptionHtml)) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = HtmlText.excerpt(item.descriptionHtml),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             Spacer(Modifier.height(4.dp))
             Text(
                 text = item.pubDate.takeIf { it.isNotBlank() } ?: item.author.takeIf { it.isNotBlank() } ?: "",

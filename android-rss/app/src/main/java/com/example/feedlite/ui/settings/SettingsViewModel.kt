@@ -6,18 +6,20 @@ import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.TranslationConfig
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
+import com.example.feedlite.data.UpdateSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * 设置页 ViewModel：翻译配置 + 阅读设置 + 测试连接。
+ * 设置页 ViewModel：翻译配置 + 阅读设置 + 更新策略 + 测试连接。
  */
 class SettingsViewModel(
     private val store: TranslationStore,
     private val reading: ReadingSettings,
     private val translator: Translator,
+    private val updateSettings: UpdateSettings,
 ) : ViewModel() {
 
     // ── 测试连接 ────────────────────────────
@@ -87,6 +89,15 @@ class SettingsViewModel(
         val err = saveTranslation()
         if (err != null) return err
         saveReading()
+        updateSettings.save(_updateConfig.value)
         return null
+    }
+
+    // ── 更新策略 ────────────────────────────
+    private val _updateConfig = MutableStateFlow(updateSettings.load())
+    val updateConfig: StateFlow<UpdateSettings.UpdateConfig> = _updateConfig.asStateFlow()
+
+    fun setInterval(hours: Int) {
+        _updateConfig.value = UpdateSettings.UpdateConfig(hours)
     }
 }

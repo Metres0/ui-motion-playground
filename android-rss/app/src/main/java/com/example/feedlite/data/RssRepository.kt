@@ -8,34 +8,67 @@ import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
 
 /**
- * 数据仓库：抓取 + 解析 + 内存缓存。
+ * 数据仓库（v1.4：本地缓存优先 + 增量更新）。
  *
- * - `HttpURLConnection`：平台内置，无额外网络库依赖；带超时与 UA；
- * - 内存缓存：同源 5 分钟内不重复抓取（stale-while-revalidate 简化版），
- *   下拉刷新通过 [refresh] 强制更新；
- * - 抓取与解析都在 IO 线程。
+ * 核心变化：
+ * - 文章持久化到 [ArticleStore]，**进入应用直接读缓存秒开**；
+ * - 网络抓取只在「超过更新间隔」或「手动刷新」时触发；
+ * - 增量合并：新文章插入，已存在的跳过，不重复请求内容。
  */
-class RssRepository(private val context: Context) {
+class RssRepository(context: Context) {
 
+    private val store = ArticleStore(context)
     private val cache = ConcurrentHashMap<String, CachedFeed>()
 
-    /** 抓取并解析一个订阅源。force=true 强制刷新（绕过缓存）。 */
-    suspend fun fetchFeed(source: FeedSource, force: Boolean = false): RssFeed = withContext(Dispatchers.IO) {
-        if (!force) {
-            cache[source.id]?.let { cached ->
-                if (System.currentTimeMillis() - cached.at < TTL_MS) {
-                    return@withContext cached.feed
-                }
+    /** 读取某源本地缓存（无缓存时返回空列表）。 */
+    fun cachedItems(sourceId: String): List<RssItem> = store.load(sourceId)
+
+    /** 某源是否有本地缓存。 */
+    fun hasCache(sourceId: String): Boolean = store.hasCache(sourceId)
+
+    /** 某源上次更新时间。 */
+    fun lastUpdated(sourceId: String): Long = store.lastUpdated(sourceId)
+
+    /**
+     * 抓取并增量合并一个源。返回「新增文章数」。
+     * 网络失败时抛异常（由调用方决定是否降级为纯缓存展示）。
+     */
+    suspend fun updateSource(source: FeedSource): Int = withContext(Dispatchers.IO) {
+        val feed = fetchFeed(source)
+        store.merge(source.id, feed.items)
+    }
+
+    /**
+     * 增量更新一批源；单个源失败不影响其他。
+     * @return 每个源新增文章数映射
+     */
+    suspend fun updateSources(sources: List<FeedSource>): Map<String, Int> = withContext(Dispatchers.IO) {
+        val result = LinkedHashMap<String, Int>()
+        for (src in sources) {
+            result[src.id] = try {
+                store.merge(src.id, fetchFeed(src).items)
+            } catch (e: Exception) {
+                0
             }
+        }
+        result
+    }
+
+    /** 删除某源缓存（取消订阅时调用）。 */
+    fun clearCache(sourceId: String) {
+        store.clear(sourceId)
+        cache.remove(sourceId)
+    }
+
+    private suspend fun fetchFeed(source: FeedSource): RssFeed {
+        val cached = cache[source.id]
+        if (cached != null && System.currentTimeMillis() - cached.at < TTL_MS) {
+            return cached.feed
         }
         val bytes = fetchBytes(source.url)
         val feed = bytes.inputStream().buffered().use { RssParser.parse(it, source) }
         cache[source.id] = CachedFeed(feed, System.currentTimeMillis())
-        feed
-    }
-
-    fun refresh(source: FeedSource) {
-        cache.remove(source.id)
+        return feed
     }
 
     private fun fetchBytes(urlString: String): ByteArray {
@@ -44,7 +77,7 @@ class RssRepository(private val context: Context) {
             conn.connectTimeout = 10_000
             conn.readTimeout = 15_000
             conn.instanceFollowRedirects = true
-            conn.setRequestProperty("User-Agent", "FeedLite/1.0 (Android; RSS Reader)")
+            conn.setRequestProperty("User-Agent", "FeedLite/1.4 (Android; RSS Reader)")
             conn.setRequestProperty("Accept", "application/rss+xml, application/atom+xml, application/xml;q=0.9, */*;q=0.8")
             val code = conn.responseCode
             if (code !in 200..299) {

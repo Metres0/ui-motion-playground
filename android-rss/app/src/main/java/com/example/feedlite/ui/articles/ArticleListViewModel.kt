@@ -2,9 +2,10 @@ package com.example.feedlite.ui.articles
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.feedlite.data.RssFeed
+import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.UpdateSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,26 +13,33 @@ import kotlinx.coroutines.launch
 
 sealed interface ArticleListUiState {
     data object Loading : ArticleListUiState
-    data class Success(val feed: RssFeed, val visibleCount: Int) : ArticleListUiState
+    data class Success(
+        val items: List<RssItem>,
+        val visibleCount: Int,
+        val sourceTitle: String,
+        /** 是否有后台增量更新在跑 */
+        val updating: Boolean = false,
+    ) : ArticleListUiState
     data class Error(val message: String) : ArticleListUiState
 }
 
 /**
- * 文章列表 ViewModel —— 「先加载 5 篇，其余点击加载更多」的状态机。
+ * 文章列表 ViewModel（v1.4：缓存优先 + 增量更新）。
  *
- * - 抓取一次 RSS feed（一次网络请求），UI 层先展示 5 篇；
- * - [loadMore] 每次追加 5 篇；底部按钮仅在还有未展示条目时出现。
+ * - 进入：先读本地缓存立即展示，若超过更新间隔则后台增量抓取；
+ * - 「先加载 5 篇，其余点击加载更多」保留。
  */
 class ArticleListViewModel(
     private val repository: RssRepository,
     private val store: SubscriptionStore,
+    private val updateSettings: UpdateSettings,
     private val sourceId: String,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ArticleListUiState>(ArticleListUiState.Loading)
     val state: StateFlow<ArticleListUiState> = _state.asStateFlow()
 
-    val source get() = store.allSources().firstOrNull { it.id == sourceId }
+    private val source get() = store.allSources().firstOrNull { it.id == sourceId }
 
     init { load() }
 
@@ -41,28 +49,62 @@ class ArticleListViewModel(
             _state.value = ArticleListUiState.Error("订阅源不存在，请返回重试")
             return
         }
-        viewModelScope.launch {
+        val title = s.title
+
+        // 1. 立即读缓存（秒开）
+        val cached = repository.cachedItems(sourceId)
+        if (cached.isNotEmpty()) {
+            _state.value = ArticleListUiState.Success(
+                items = cached,
+                visibleCount = minOf(5, cached.size),
+                sourceTitle = title,
+            )
+        } else {
             _state.value = ArticleListUiState.Loading
-            try {
-                val feed = repository.fetchFeed(s)
-                // ★ 修复闪退：文章数不足 5 时按实际数量展示，防止 items[index] 越界
-                _state.value = ArticleListUiState.Success(feed, visibleCount = minOf(5, feed.items.size))
-            } catch (e: Exception) {
-                _state.value = ArticleListUiState.Error(e.message ?: "加载失败，请检查网络")
+        }
+
+        // 2. 超过间隔则后台增量更新
+        if (updateSettings.needsUpdate(repository, sourceId)) {
+            viewModelScope.launch {
+                try {
+                    repository.updateSource(s)
+                } catch (e: Exception) {
+                    // 网络失败：有缓存则继续展示缓存
+                }
+                val items = repository.cachedItems(sourceId)
+                _state.value = ArticleListUiState.Success(
+                    items = items,
+                    visibleCount = minOf(5, items.size),
+                    sourceTitle = title,
+                )
             }
         }
     }
 
-    /** 强制重新抓取（下拉刷新语义）。 */
+    /** 手动刷新：强制增量抓取。 */
     fun refresh() {
-        source?.let { repository.refresh(it) }
-        load()
+        val s = source ?: return
+        viewModelScope.launch {
+            _state.value = (state.value as? ArticleListUiState.Success)?.copy(updating = true)
+                ?: ArticleListUiState.Loading
+            try {
+                repository.updateSource(s)
+            } catch (e: Exception) {
+                _state.value = ArticleListUiState.Error(e.message ?: "加载失败，请检查网络")
+            }
+            val items = repository.cachedItems(sourceId)
+            _state.value = ArticleListUiState.Success(
+                items = items,
+                visibleCount = minOf(5, items.size),
+                sourceTitle = s.title,
+            )
+        }
     }
 
     /** 点击「加载更多」：追加 5 篇。 */
     fun loadMore() {
         val cur = _state.value as? ArticleListUiState.Success ?: return
-        val next = (cur.visibleCount + 5).coerceAtMost(cur.feed.items.size)
+        val next = (cur.visibleCount + 5).coerceAtMost(cur.items.size)
         _state.value = cur.copy(visibleCount = next)
     }
 }

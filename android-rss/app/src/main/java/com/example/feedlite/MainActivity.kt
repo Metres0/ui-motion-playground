@@ -12,6 +12,7 @@ import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
+import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.AppNav
 import com.example.feedlite.ui.theme.FeedLiteTheme
 
@@ -24,6 +25,7 @@ class MainActivity : ComponentActivity() {
         val repository = RssRepository(applicationContext)
         val translationStore = TranslationStore(applicationContext)
         val translator = Translator(translationStore)
+        val updateSettings = UpdateSettings(applicationContext)
 
         setContent {
             FeedLiteTheme {
@@ -36,6 +38,7 @@ class MainActivity : ComponentActivity() {
                         repository = repository,
                         translator = translator,
                         translationStore = translationStore,
+                        updateSettings = updateSettings,
                     )
                 }
             }

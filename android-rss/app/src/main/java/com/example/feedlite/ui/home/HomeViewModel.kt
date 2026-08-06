@@ -6,8 +6,7 @@ import com.example.feedlite.data.FeedSource
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import com.example.feedlite.data.UpdateSettings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,22 +19,24 @@ sealed interface HomeUiState {
     data object Loading : HomeUiState
     data class Success(
         val entries: List<FeedEntry>,
-        /** 抓取成功的源数 / 启用源总数，用于空态提示 */
         val loadedCount: Int,
         val enabledCount: Int,
+        /** 本次是否有后台增量更新在跑 */
+        val updating: Boolean = false,
     ) : HomeUiState
 }
 
 /**
- * 首页聚合流 ViewModel。
+ * 首页聚合流 ViewModel（v1.4：缓存秒开 + 增量更新）。
  *
- * - 并行抓取所有启用源，合并为按源顺序排列的文章流；
- * - 个别源失败不影响其他源（失败源跳过，[loadedCount] 反映成功数）；
- * - 同时承担侧边栏的源管理操作（toggle/add/remove），操作后刷新聚合。
+ * - 初始化：直接读所有启用源的本地缓存 → 立即展示（秒开）；
+ * - 后台协程：对「无缓存」或「超过更新间隔」的源做增量抓取；
+ * - 手动刷新 [refresh]：强制全部增量抓取（只加新文章）。
  */
 class HomeViewModel(
     private val repository: RssRepository,
     private val store: SubscriptionStore,
+    private val updateSettings: UpdateSettings,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
@@ -51,36 +52,71 @@ class HomeViewModel(
 
     fun load() {
         val enabledIds = store.enabledIds()
-        viewModelScope.launch {
-            _state.value = HomeUiState.Loading
-            val feeds = enabledIds.mapNotNull { id ->
-                store.allSources().firstOrNull { it.id == id }
-            }.map { src ->
-                async {
-                    try { repository.fetchFeed(src) to src } catch (e: Exception) { null }
-                }
-            }
-            val results = feeds.awaitAll().filterNotNull()
-            val entries = results.flatMap { (feed, src) ->
-                feed.items.map { FeedEntry(it, src) }
-            }
+        val sources = enabledIds.mapNotNull { id -> store.allSources().firstOrNull { it.id == id } }
+
+        // 1. 立即从本地缓存展示（秒开；有缓存才展示，无缓存保持 Loading 等后台）
+        val entries = sources.flatMap { src ->
+            repository.cachedItems(src.id).map { FeedEntry(it, src) }
+        }
+        if (entries.isNotEmpty()) {
             _state.value = HomeUiState.Success(
                 entries = entries,
-                loadedCount = results.size,
+                loadedCount = sources.size,
+                enabledCount = enabledIds.size,
+                updating = true,
+            )
+        }
+
+        // 2. 后台增量更新：只处理无缓存或超过间隔的源
+        val needUpdate = sources.filter { updateSettings.needsUpdate(repository, it.id) }
+        if (needUpdate.isNotEmpty()) {
+            viewModelScope.launch {
+                repository.updateSources(needUpdate)
+                val newEntries = sources.flatMap { src ->
+                    repository.cachedItems(src.id).map { FeedEntry(it, src) }
+                }
+                _state.value = HomeUiState.Success(
+                    entries = newEntries,
+                    loadedCount = sources.size,
+                    enabledCount = enabledIds.size,
+                )
+            }
+        } else if (_state.value !is HomeUiState.Success) {
+            _state.value = HomeUiState.Success(
+                entries = entries,
+                loadedCount = sources.size,
                 enabledCount = enabledIds.size,
             )
         }
     }
 
+    /** 手动刷新：强制全部启用源增量抓取。 */
     fun refresh() {
-        store.allSources().forEach { repository.refresh(it) }
-        load()
+        val enabledIds = store.enabledIds()
+        val sources = enabledIds.mapNotNull { id -> store.allSources().firstOrNull { it.id == id } }
+        viewModelScope.launch {
+            _state.value = HomeUiState.Success(
+                entries = _state.value.let { (it as? HomeUiState.Success)?.entries ?: emptyList() },
+                loadedCount = sources.size,
+                enabledCount = enabledIds.size,
+                updating = true,
+            )
+            repository.updateSources(sources)
+            val newEntries = sources.flatMap { src ->
+                repository.cachedItems(src.id).map { FeedEntry(it, src) }
+            }
+            _state.value = HomeUiState.Success(
+                entries = newEntries,
+                loadedCount = sources.size,
+                enabledCount = enabledIds.size,
+            )
+        }
     }
 
     fun toggleSource(id: String, on: Boolean) {
         store.setEnabled(id, on)
         _enabled.value = store.enabledIds()
-        load() // 聚合内容随开关变化
+        load()
     }
 
     fun addCustom(title: String, url: String) {
@@ -92,6 +128,7 @@ class HomeViewModel(
 
     fun removeCustom(id: String) {
         store.removeCustom(id)
+        repository.clearCache(id)
         _sources.value = store.allSources()
         _enabled.value = store.enabledIds()
         load()

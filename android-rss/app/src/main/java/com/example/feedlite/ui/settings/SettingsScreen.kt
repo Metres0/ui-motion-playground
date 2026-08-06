@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.TranslationStore
 import com.example.feedlite.data.Translator
+import com.example.feedlite.data.UpdateSettings
 import kotlin.math.roundToInt
 
 /**
@@ -55,16 +56,18 @@ import kotlin.math.roundToInt
 fun SettingsScreen(
     store: TranslationStore,
     translator: Translator,
+    updateSettings: UpdateSettings,
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { SettingsViewModel(store, ReadingSettings(context), translator) }
+            initializer { SettingsViewModel(store, ReadingSettings(context), translator, updateSettings) }
         }
     )
     val config by viewModel.config.collectAsState()
     val reading by viewModel.readingConfig.collectAsState()
+    val updateCfg by viewModel.updateConfig.collectAsState()
     val testState by viewModel.testState.collectAsState()
     var saved by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -206,6 +209,35 @@ fun SettingsScreen(
                     onClick = { viewModel.updateReading { it.copy(fontFamily = ReadingSettings.FONT_MONO) } },
                     label = { Text("等宽") },
                 )
+            }
+
+            Spacer(Modifier.height(24.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(16.dp))
+
+            // ════════ 更新策略 ════════
+            Text("更新策略", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "进入应用直接读缓存秒开，超过间隔才自动增量抓取新文章；手动刷新可随时强制更新。",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+
+            Text("自动更新间隔", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                UpdateSettings.OPTIONS.forEach { h ->
+                    val label = when (h) {
+                        0 -> "手动"
+                        else -> "${h}h"
+                    }
+                    FilterChip(
+                        selected = updateCfg.intervalHours == h,
+                        onClick = { viewModel.setInterval(h) },
+                        label = { Text(label) },
+                    )
+                }
             }
 
             Spacer(Modifier.height(24.dp))

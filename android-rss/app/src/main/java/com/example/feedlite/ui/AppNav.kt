@@ -19,6 +19,7 @@ import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
 import com.example.feedlite.data.Translator
 import com.example.feedlite.data.TranslationStore
+import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.articles.ArticleListScreen
 import com.example.feedlite.ui.detail.ArticleDetailScreen
 import com.example.feedlite.ui.home.HomeScreen
@@ -41,6 +42,7 @@ fun AppNav(
     repository: RssRepository,
     translator: Translator,
     translationStore: TranslationStore,
+    updateSettings: UpdateSettings,
 ) {
     val nav = rememberNavController()
 
@@ -58,6 +60,7 @@ fun AppNav(
                 HomeScreen(
                     repository = repository,
                     store = store,
+                    updateSettings = updateSettings,
                     animatedVisibilityScope = scope,
                     onOpenSource = { source: FeedSource ->
                         nav.navigate("articles/${Uri.encode(source.id)}")
@@ -91,6 +94,7 @@ fun AppNav(
                     sourceId = sourceId,
                     repository = repository,
                     store = store,
+                    updateSettings = updateSettings,
                     animatedVisibilityScope = scope,
                     onBack = { nav.popBackStack() },
                     onOpenArticle = { item ->
@@ -143,6 +147,7 @@ fun AppNav(
                 SettingsScreen(
                     store = translationStore,
                     translator = translator,
+                    updateSettings = updateSettings,
                     onBack = { nav.popBackStack() },
                 )
             }

@@ -22,11 +22,9 @@ sealed interface TranslationUiState {
 /**
  * 详情页 ViewModel。
  *
- * 翻译流程（v1.2）：
- * 1. 从原文 HTML 提取 <pre> 代码块 → 占位符（**代码块不参与翻译**）；
- * 2. 占位文本 → 纯文本 → 调用翻译接口；
- * 3. 译文还原占位符 → 代码块原文；
- * 4. 结果缓存到 [ArticleCache.translations]。
+ * v1.4：翻译结果「替换原文显示」，可一键切换原文/译文。
+ * - [showTranslation] 为 true 时，正文区域渲染译文而非原文块；
+ * - 翻译成功后自动切到译文，顶栏「原文/译文」切换按钮随时可换。
  */
 class ArticleDetailViewModel(
     private val articleKey: String,
@@ -40,12 +38,18 @@ class ArticleDetailViewModel(
     )
     val translation: StateFlow<TranslationUiState> = _translation.asStateFlow()
 
+    private val _showTranslation = MutableStateFlow(
+        ArticleCache.translations[articleKey] != null
+    )
+    val showTranslation: StateFlow<Boolean> = _showTranslation.asStateFlow()
+
     fun translate() {
-        if (_translation.value is TranslationUiState.Done || _translation.value is TranslationUiState.Translating) return
+        if (_translation.value is TranslationUiState.Translating) return
 
         val cached = ArticleCache.translations[articleKey]
         if (cached != null) {
             _translation.value = TranslationUiState.Done(cached)
+            _showTranslation.value = true
             return
         }
         val item = ArticleCache.get(articleKey)
@@ -71,9 +75,18 @@ class ArticleDetailViewModel(
                 val restored = CodeBlockExtractor.restore(rawResult, extracted.codes)
                 ArticleCache.translations[articleKey] = restored
                 _translation.value = TranslationUiState.Done(restored)
+                _showTranslation.value = true // ★ 翻译完成后替换原文显示
             } catch (e: Exception) {
                 _translation.value = TranslationUiState.Error(e.message ?: "翻译失败，请重试")
             }
         }
     }
+
+    /** 一键切换原文/译文。 */
+    fun toggleTranslation() {
+        _showTranslation.value = !_showTranslation.value
+    }
+
+    /** 是否有可用的译文。 */
+    fun hasTranslation(): Boolean = _translation.value is TranslationUiState.Done
 }

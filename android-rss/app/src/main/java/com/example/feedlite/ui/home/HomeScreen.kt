@@ -80,6 +80,7 @@ import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.RssRepository
 import com.example.feedlite.data.SubscriptionStore
+import com.example.feedlite.data.UpdateSettings
 import com.example.feedlite.ui.components.ProgressiveImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -93,13 +94,16 @@ import kotlin.math.roundToInt
 fun SharedTransitionScope.HomeScreen(
     repository: RssRepository,
     store: SubscriptionStore,
+    updateSettings: UpdateSettings,
     animatedVisibilityScope: AnimatedVisibilityScope,
     onOpenSource: (FeedSource) -> Unit,
     onOpenArticle: (RssItem) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     val viewModel: HomeViewModel = viewModel(
-        factory = viewModelFactory { initializer { HomeViewModel(repository, store) } }
+        factory = viewModelFactory {
+            initializer { HomeViewModel(repository, store, updateSettings) }
+        }
     )
     val state by viewModel.state.collectAsState()
     val sources by viewModel.sources.collectAsState()
@@ -294,14 +298,17 @@ private fun SharedTransitionScope.HomeArticleCard(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = HtmlText.excerpt(entry.item.descriptionHtml, 60),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // ★ 过滤「点击查看原文」等纯链接噪音，无实质内容不显示摘要
+            if (HtmlText.hasMeaningfulContent(entry.item.descriptionHtml)) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = HtmlText.excerpt(entry.item.descriptionHtml, 60),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }

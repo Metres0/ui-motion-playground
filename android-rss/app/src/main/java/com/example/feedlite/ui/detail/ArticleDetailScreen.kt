@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -28,6 +29,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -55,6 +57,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -66,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.feedlite.data.HtmlText
 import com.example.feedlite.data.ReadingSettings
 import com.example.feedlite.data.RssItem
 import com.example.feedlite.data.Translator
@@ -76,10 +80,11 @@ import com.example.feedlite.ui.reader.HtmlBlocks
 import kotlin.math.roundToInt
 
 /**
- * 文章详情页（v1.3）：
- * - 正文排版渲染：标题/段落独立/列表/引用/**正文图片真实显示**/代码块(深色+复制)；
- * - **文章内阅读设置面板**：TopAppBar「A」按钮 → BottomSheet 调字号/行高/字体，即时生效；
- * - 翻译：代码块不参与翻译。
+ * 文章详情页（v1.4）：
+ * - **译文替换原文显示**，顶部「原文/译文」切换 chips 一键切换；
+ * - 正文行内链接**可点击**（ClickableText + URL annotation，点击打开浏览器）；
+ * - InfoQ 等「仅链接无正文」源 → 识别为空摘要，显示引导 + 打开原文按钮；
+ * - 阅读设置面板、代码块复制、正文图片渲染保留。
  */
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +98,6 @@ fun SharedTransitionScope.ArticleDetailScreen(
     val item = remember(itemKey) { ArticleCache.get(itemKey) }
     val context = LocalContext.current
 
-    // ★ 阅读设置：状态化 + 面板即时更新 + 持久化
     var reading by remember { mutableStateOf(ReadingSettings(context).load()) }
     val readingStore = remember { ReadingSettings(context) }
     var showReadingPanel by remember { mutableStateOf(false) }
@@ -104,6 +108,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
         }
     )
     val translation by viewModel.translation.collectAsState()
+    val showTranslation by viewModel.showTranslation.collectAsState()
 
     val bodyFont = when (reading.fontFamily) {
         ReadingSettings.FONT_SERIF -> FontFamily.Serif
@@ -126,7 +131,6 @@ fun SharedTransitionScope.ArticleDetailScreen(
                     }
                 },
                 actions = {
-                    // ★ 阅读设置（文章内）
                     IconButton(onClick = { showReadingPanel = true }) {
                         Icon(Icons.Default.FormatSize, contentDescription = "阅读设置")
                     }
@@ -155,6 +159,7 @@ fun SharedTransitionScope.ArticleDetailScreen(
         }
 
         val blocks = remember(item.descriptionHtml) { HtmlBlocks.parse(item.descriptionHtml) }
+        val hasContent = remember(item.descriptionHtml) { HtmlText.hasMeaningfulContent(item.descriptionHtml) }
 
         Column(
             modifier = Modifier
@@ -188,8 +193,60 @@ fun SharedTransitionScope.ArticleDetailScreen(
                 )
                 Spacer(Modifier.height(16.dp))
 
-                // ── 排版正文（含正文图片） ─────────────────
-                if (blocks.isEmpty()) {
+                // ── ★ 原文 / 译文 切换（有译文时显示） ─────
+                if (translation is TranslationUiState.Done) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("显示：", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = !showTranslation,
+                            onClick = { viewModel.toggleTranslation() },
+                            label = { Text("原文") },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        FilterChip(
+                            selected = showTranslation,
+                            onClick = { viewModel.toggleTranslation() },
+                            label = { Text("译文") },
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                // ── 正文区域（译文替换原文） ───────────────
+                if (showTranslation && translation is TranslationUiState.Done) {
+                    // 译文替换原文显示
+                    val translatedText = (translation as TranslationUiState.Done).text
+                    if (translatedText.isNotBlank()) {
+                        SelectionContainer {
+                            Text(
+                                text = translatedText,
+                                style = bodyStyle,
+                            )
+                        }
+                    }
+                } else if (!hasContent) {
+                    // InfoQ 等仅链接源：引导打开原文
+                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                        Text(
+                            "该源未提供正文摘要",
+                            style = bodyStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Button(
+                            onClick = {
+                                if (item.link.isNotBlank()) {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.link)))
+                                }
+                            },
+                        ) {
+                            Icon(Icons.Default.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("打开原文链接")
+                        }
+                    }
+                } else if (blocks.isEmpty()) {
                     Text(
                         "（该源未提供正文摘要）",
                         style = bodyStyle,
@@ -200,18 +257,44 @@ fun SharedTransitionScope.ArticleDetailScreen(
                     SelectionContainer {
                         Column {
                             blocks.forEach { block ->
-                                BlockView(block, bodyStyle, primary)
+                                BlockView(
+                                    block = block,
+                                    bodyStyle = bodyStyle,
+                                    primaryColor = primary,
+                                    context = context,
+                                )
                                 Spacer(Modifier.height(12.dp))
                             }
                         }
                     }
                 }
 
-                // ── 翻译区块 ─────────────────────────────
-                TranslationSection(
-                    state = translation,
-                    onRetry = { viewModel.translate() },
-                )
+                // ── 翻译状态提示/错误 ─────────────────────
+                when (val t = translation) {
+                    is TranslationUiState.Translating -> {
+                        Spacer(Modifier.height(20.dp))
+                        HorizontalDivider(Modifier.padding(bottom = 16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text("正在翻译…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                    is TranslationUiState.Error -> {
+                        Spacer(Modifier.height(20.dp))
+                        HorizontalDivider(Modifier.padding(bottom = 16.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                t.message,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = { viewModel.translate() }) { Text("重试") }
+                        }
+                    }
+                    else -> Unit
+                }
 
                 Spacer(Modifier.height(24.dp))
                 if (item.link.isNotBlank()) {
@@ -228,42 +311,46 @@ fun SharedTransitionScope.ArticleDetailScreen(
         }
     }
 
-    // ── 阅读设置面板 ───────────────────────────────
     if (showReadingPanel) {
         ReadingSettingsPanel(
             reading = reading,
             onUpdate = { new ->
                 reading = new
-                readingStore.save(new) // 即时持久化
+                readingStore.save(new)
             },
             onDismiss = { showReadingPanel = false },
         )
     }
 }
 
-/** 单个排版块的渲染。 */
+/** 单个排版块的渲染（链接可点击）。 */
 @Composable
 private fun BlockView(
     block: HtmlBlocks.Block,
-    bodyStyle: androidx.compose.ui.text.TextStyle,
+    bodyStyle: TextStyle,
     primaryColor: Color,
+    context: android.content.Context,
 ) {
     when (block) {
-        is HtmlBlocks.Block.Paragraph -> Text(
-            spansToAnnotated(block.spans, bodyStyle, primaryColor),
+        is HtmlBlocks.Block.Paragraph -> RichText(
+            spans = block.spans,
             style = bodyStyle,
+            primaryColor = primaryColor,
+            context = context,
         )
 
         is HtmlBlocks.Block.Heading -> {
             val size = when (block.level) {
                 1 -> 24f; 2 -> 22f; 3 -> 20f; 4 -> 18f; else -> 16f
             }
-            Text(
-                spansToAnnotated(block.spans, bodyStyle, primaryColor),
+            RichText(
+                spans = block.spans,
                 style = bodyStyle.copy(
                     fontSize = (size * (bodyStyle.fontSize.value / 16f)).sp,
                     fontWeight = FontWeight.Bold,
                 ),
+                primaryColor = primaryColor,
+                context = context,
             )
         }
 
@@ -271,7 +358,13 @@ private fun BlockView(
             block.items.forEach { spans ->
                 Row(Modifier.padding(vertical = 2.dp)) {
                     Text("•  ", style = bodyStyle, color = primaryColor)
-                    Text(spansToAnnotated(spans, bodyStyle, primaryColor), style = bodyStyle, modifier = Modifier.weight(1f))
+                    RichText(
+                        spans = spans,
+                        style = bodyStyle,
+                        primaryColor = primaryColor,
+                        context = context,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -280,7 +373,13 @@ private fun BlockView(
             block.items.forEachIndexed { idx, spans ->
                 Row(Modifier.padding(vertical = 2.dp)) {
                     Text("${idx + 1}.  ", style = bodyStyle, color = primaryColor)
-                    Text(spansToAnnotated(spans, bodyStyle, primaryColor), style = bodyStyle, modifier = Modifier.weight(1f))
+                    RichText(
+                        spans = spans,
+                        style = bodyStyle,
+                        primaryColor = primaryColor,
+                        context = context,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }
@@ -301,7 +400,6 @@ private fun BlockView(
 
         is HtmlBlocks.Block.CodeBlock -> CodeBlockView(block)
 
-        // ★ 正文图片：真实渲染
         is HtmlBlocks.Block.Image -> ProgressiveImage(
             url = block.url,
             seed = block.url.hashCode(),
@@ -313,6 +411,32 @@ private fun BlockView(
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
         )
     }
+}
+
+/**
+ * ★ 富文本块渲染：ClickableText + URL annotation。
+ * 带链接的 span 可点击，点击后用浏览器打开。
+ */
+@Composable
+private fun RichText(
+    spans: List<HtmlBlocks.Span>,
+    style: TextStyle,
+    primaryColor: Color,
+    context: android.content.Context,
+    modifier: Modifier = Modifier,
+) {
+    val annotated = remember(spans) { spansToAnnotated(spans, style, primaryColor) }
+    ClickableText(
+        text = annotated,
+        style = style,
+        modifier = modifier,
+        onClick = { offset ->
+            val url = annotated.getStringAnnotations("URL", offset, offset).firstOrNull()?.item
+            if (url != null) {
+                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            }
+        },
+    )
 }
 
 /** 代码块：深色背景 + 等宽字体 + 水平滚动 + 复制。 */
@@ -359,24 +483,29 @@ private fun CodeBlockView(block: HtmlBlocks.Block.CodeBlock) {
     }
 }
 
-/** 行内 Span → AnnotatedString。 */
+/** 行内 Span → AnnotatedString，链接注册 URL annotation。 */
 private fun spansToAnnotated(
     spans: List<HtmlBlocks.Span>,
-    base: androidx.compose.ui.text.TextStyle,
+    base: TextStyle,
     primaryColor: Color,
 ): AnnotatedString = buildAnnotatedString {
     for (s in spans) {
+        val start = length
         val span = SpanStyle(
             fontWeight = if (s.bold) FontWeight.Bold else null,
             fontStyle = if (s.italic) FontStyle.Italic else null,
             fontFamily = if (s.code) FontFamily.Monospace else null,
             color = if (s.link != null) primaryColor else Color.Unspecified,
+            textDecoration = if (s.link != null) androidx.compose.ui.text.style.TextDecoration.Underline else null,
         )
         withStyle(span) { append(s.text) }
+        if (s.link != null) {
+            addStringAnnotation("URL", s.link, start, length)
+        }
     }
 }
 
-/** ★ 阅读设置面板（文章内 AA 按钮弹出）。 */
+/** 阅读设置面板。 */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ReadingSettingsPanel(
@@ -440,76 +569,6 @@ private fun ReadingSettingsPanel(
             Spacer(Modifier.height(8.dp))
             TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End)) {
                 Text("完成")
-            }
-        }
-    }
-}
-
-/** 译文区块。 */
-@Composable
-private fun TranslationSection(
-    state: TranslationUiState,
-    onRetry: () -> Unit,
-) {
-    when (state) {
-        TranslationUiState.Idle -> {
-            Spacer(Modifier.height(20.dp))
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-            ) {
-                Icon(
-                    Icons.Default.Translate,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "点击右上角「翻译」翻译全文（代码块保留原文）",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-
-        TranslationUiState.Translating -> {
-            Spacer(Modifier.height(20.dp))
-            HorizontalDivider(Modifier.padding(bottom = 16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
-                Spacer(Modifier.width(8.dp))
-                Text("正在翻译…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-
-        is TranslationUiState.Done -> {
-            Spacer(Modifier.height(20.dp))
-            HorizontalDivider(Modifier.padding(bottom = 16.dp))
-            Text("译文", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.height(8.dp))
-            SelectionContainer {
-                Text(
-                    text = state.text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    lineHeight = 26.sp,
-                )
-            }
-        }
-
-        is TranslationUiState.Error -> {
-            Spacer(Modifier.height(20.dp))
-            HorizontalDivider(Modifier.padding(bottom = 16.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    state.message,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton(onClick = onRetry) { Text("重试") }
             }
         }
     }
