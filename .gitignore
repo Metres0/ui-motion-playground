@@ -1,0 +1,25 @@
+# ── Android / Gradle ─────────────────────────────
+# 签名密钥库绝不上传
+*.keystore
+keystore/
+# 构建产物
+build/
+.gradle/
+local.properties
+*.apk
+*.aab
+# IDE
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ── Windows ──────────────────────────────────────
+Thumbs.db
+Desktop.ini
+*.tmp
+
+# ── Node / Web ───────────────────────────────────
+node_modules/
+dist/

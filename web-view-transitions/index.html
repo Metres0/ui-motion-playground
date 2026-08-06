@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI Playground · Web (View Transitions)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>UI Playground · Web</h1>
+    <p class="hint">hover 卡片 = 预取 → 点击 = 秒开。对比 Android 端的 motion-tokens.md。</p>
+  </header>
+
+  <!-- 列表视图 -->
+  <main id="list-view">
+    <div id="cards" class="cards"><!-- JS 渲染 --></div>
+  </main>
+
+  <!-- 详情视图 -->
+  <main id="detail-view" hidden>
+    <div class="detail-topbar">
+      <button id="back-btn" class="back-btn">← 返回</button>
+      <span id="prefetch-badge" class="badge" hidden>预取命中 · 秒开</span>
+    </div>
+    <img id="detail-hero" class="detail-hero" alt="" hidden>
+    <div class="detail-body">
+      <h2 id="detail-title"></h2>
+      <p id="detail-sub" class="detail-sub"></p>
+      <p id="detail-body" class="detail-body-text"></p>
+    </div>
+    <div id="detail-skeleton" class="skeleton-block"></div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
