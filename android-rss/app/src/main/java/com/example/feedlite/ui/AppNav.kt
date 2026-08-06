@@ -48,6 +48,7 @@ import com.example.feedlite.ui.articles.ArticleListScreen
 import com.example.feedlite.ui.detail.ArticleDetailScreen
 import com.example.feedlite.ui.home.HomeScreen
 import com.example.feedlite.ui.settings.SettingsScreen
+import com.example.feedlite.ui.sources.SourceManageScreen
 
 /**
  * 导航编排（v1.14）：
@@ -227,6 +228,28 @@ fun AppNav(
                     themeSettings = themeSettings,
                     subscriptionStore = store,
                     readingState = readingState,
+                    onOpenSources = { nav.navigate("sources") },
+                    onBack = { nav.popBackStack() },
+                )
+            }
+            // ★ v1.24：订阅源管理二级页
+            composable(
+                route = "sources",
+                enterTransition = {
+                    slideIntoContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Left,
+                        animationSpec = tween(MotionTokens.Duration.Enter, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeIn(MotionTokens.pageEnter())
+                },
+                popExitTransition = {
+                    slideOutOfContainer(
+                        towards = AnimatedContentTransitionScope.SlideDirection.Right,
+                        animationSpec = tween(MotionTokens.Duration.Exit, easing = MotionTokens.Easing.Emphasized),
+                    ) + fadeOut(MotionTokens.pageExit())
+                },
+            ) {
+                SourceManageScreen(
+                    store = store,
                     onOpenSource = { source: FeedSource ->
                         nav.navigate("articles/${Uri.encode(source.id)}")
                     },
