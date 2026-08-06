@@ -74,11 +74,15 @@ fun AppNav(
             bottomBar = {
                 val backStack by nav.currentBackStackEntryAsState()
                 val current = backStack?.destination
+                // ★ 详情页自动隐藏底部栏；「设置」加入 Tab
+                val showBar = current?.route?.startsWith("article") != true
+                if (showBar) {
                 NavigationBar {
                     val items = listOf(
                         Triple("home", R.drawable.ic_nav_home, "首页"),
                         Triple("starred", R.drawable.ic_nav_star, "收藏"),
                         Triple("later", R.drawable.ic_nav_bookmark, "稍后再看"),
+                        Triple("settings", R.drawable.ic_nav_settings, "设置"),
                     )
                     items.forEach { (route, iconRes, label) ->
                         val selected = current?.hierarchy?.any { it.route == route } == true
@@ -101,6 +105,7 @@ fun AppNav(
                             label = { Text(label) },
                         )
                     }
+                }
                 }
             },
         ) { padding ->

@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RssFeed
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DrawerValue
@@ -120,7 +119,6 @@ fun SharedTransitionScope.HomeScreen(
     val sources by viewModel.sources.collectAsState()
     val enabled by viewModel.enabled.collectAsState()
     val readVersion by readingState.version.collectAsState() // ★ 已读变化刷新
-    val laterCount = remember(readVersion) { readingState.readLaterItems().size } // ★ 挂起数角标
 
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
@@ -166,17 +164,17 @@ fun SharedTransitionScope.HomeScreen(
     ) {
         Scaffold(
             topBar = {
+                // ★ 精简顶栏：紧凑 TopAppBar + 小 logo + 去掉稍后再看图标（底部栏已有）
                 TopAppBar(
                     title = {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            // ★ 品牌 logo 小图标
                             Image(
                                 painter = painterResource(com.example.feedlite.R.drawable.ic_brand_logo),
                                 contentDescription = null,
-                                modifier = Modifier.size(26.dp),
+                                modifier = Modifier.size(18.dp),
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text("轻阅 RSS")
+                            Spacer(Modifier.width(6.dp))
+                            Text("轻阅", style = MaterialTheme.typography.titleMedium)
                         }
                     },
                     navigationIcon = {
@@ -185,28 +183,6 @@ fun SharedTransitionScope.HomeScreen(
                         }
                     },
                     actions = {
-                        // ★ 稍后再看角标（点击直接进挂起列表）
-                        Box {
-                            IconButton(onClick = onOpenLater) {
-                                Icon(
-                                    painterResource(com.example.feedlite.R.drawable.ic_nav_bookmark),
-                                    contentDescription = "稍后再看",
-                                    tint = Color.Unspecified,
-                                )
-                            }
-                            if (laterCount > 0) {
-                                Badge(
-                                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 6.dp, y = 4.dp),
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                ) {
-                                    Text(
-                                        if (laterCount > 99) "99+" else "$laterCount",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                    )
-                                }
-                            }
-                        }
                         IconButton(onClick = viewModel::refresh) {
                             Icon(Icons.Default.Refresh, contentDescription = "刷新全部")
                         }

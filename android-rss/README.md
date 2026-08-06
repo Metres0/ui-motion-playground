@@ -2,7 +2,7 @@
 
 把「通用动效 + 加载策略」研究成果落地的**可安装 RSS 应用**：
 首页聚合流（分类分段）+ 侧边栏源管理 + AI 翻译 + 富文本排版；全程 Compose 动效
-（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.14**。
+（共享元素转场 / stagger / 渐进式图片），针对 **Android 16（API 36）** 构建，**v1.15**。
 
 ---
 
@@ -28,6 +28,13 @@
 | **链接可点击** | 正文行内链接点击即打开浏览器；InfoQ 等纯链接源识别为空摘要并引导打开原文 |
 | 图片优化 | 列表 360px / 详情 1280px 解码；Referer 防盗链拦截器；cleartext 兼容 |
 | 错误兜底 | 加载失败显示原因 + 重试；单个源失败不影响其他源 |
+
+## 二、v1.15 更新日志
+
+1. **底部栏加「设置」Tab**：底部导航变为 首页 / 收藏 / 稍后再看 / 设置 四个 Tab；
+2. **详情页自动隐藏底部栏**：进入文章详情时底部栏消失（阅读更沉浸），返回后恢复；
+3. **首页顶栏精简**：去掉「稍后再看」角标图标（底部栏已有该 Tab）；Logo 缩小、
+   标题改「轻阅」、只保留刷新按钮，顶部空间明显变小。
 
 ## 二、v1.14 更新日志
 
@@ -181,7 +188,7 @@
 |---|---|
 | compileSdk / targetSdk | **36（Android 16）** |
 | minSdk | 26（Android 8.0） |
-| 版本 | versionName 1.14 / versionCode 15 |
+| 版本 | versionName 1.15 / versionCode 16 |
 | UI | Jetpack Compose（BOM 2024.10.01）+ Material 3 |
 | 导航 | Navigation Compose 2.8 + SharedTransitionLayout 共享元素 |
 | 解析 | 平台内置 XmlPullParser（RSS 2.0 + Atom，零依赖） |
